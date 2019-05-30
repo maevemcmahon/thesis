@@ -1,0 +1,18 @@
+---
+title: "Acknowledgements"
+output: html_document
+---
+\phantomsection
+\chapter*{Acknowledgements}
+\addcontentsline{toc}{chapter}{Acknowledgements}
+\pagestyle{plain}
+
+I would like to begin my acknowledgements by sharing my deepest gratitude to my supervisor David Clayton and my lab mentor Julie George. Without your endless patience and rapid and thorough feedback, I am confident that this document, and my scientific thinking, would not have developed to their current form. Thank you for taking a chance on my enthusiasm for avian rhythm perception and for guiding me through this neuroscientific thesis while letting me continue to explore the behavioural basis for the genomic findings, and never discouraging my non-academic pursuits.
+
+I must specifically thank Julie George for her substantial help with sectioning, and Joelle Clayton for coding the many hours of videos that went into the analysis of behavioural responses to song playback. Carel ten Cate provided great assistance with the training of the zebra finches for the _ZENK_ analysis chapter, and this project would certainly not have been successful without his and his lab's support. Thanks also to Caroline Brennan and Isabelle Mareschal for their role on my panel. This work was supported by The Leverhulme Trust (Project ID RPG-2014-077).
+
+Among those with no formal involvement in this project, Rob Lachlan contributed by far the most. Specifically, the Operanter software and hardware relied on his previous experience and ongoing technical support. More broadly, my views on data analysis and statistical programming have been heavily shaped by his advice, and I have job opportunities in data science in no small part to his guidance. I count myself lucky to have had such a mentor.
+
+A series of influential teachers from Montessori through university all, in one way or another, helped me through difficult times and unfailingly encouraged me to pursue whatever most interests me: Betty, Maria, Mrs Baughman, Mr P, and Dr Cath Loveday. Thanks also to my parents, who, despite having no scientific background, seem to find endless interest in my research - thank you for the opportunities that made this PhD possible. I would be remiss to not thank my fellow PhD students, including BirdJoe and Kirsty, for numerous science and life chats. And thanks also to my friends and colleagues at Hexad Brewing, without whom my sanity would not exist.
+
+Finally I must thank my husband Ardern. Written text can never express my gratitude for your kindness, determination, patience, cooking (and brewing!), heated discussions about the merits of R packages, and enthusiasm. From the start of your PhD to the end of mine, we have celebrated eight years of fun, and I look forward to discovering what life without doing a PhD is like with you.

@@ -1,0 +1,11 @@
+---
+title: "Abstract"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+\phantomsection
+\chapter*{Abstract}
+
+Zebra finches are a well-established animal model for probing the molecular and neuroanatomical mechanisms underlying several forms of learning. Much of the past research has focused on highly specialised forms of learning during juvenile critical periods, especially male song learning. However, birds must continue learn from daily experience even in adulthood. Here I develop and apply operant conditioning techniques to gain insight into the behavioural, molecular and neural mechanisms that allow zebra finches to form and maintain different associations with specific songs they hear in adulthood. Song associations were shaped using a Go/No-Go operant conditioning paradigm. I then compared the anatomical pattern of _ZENK_ expression after conditioning was complete. I detected no significant difference in the overall magnitude of _ZENK_ when birds heard either category of stimulus, but a statistical analysis of local variations in gene expression within the auditory forebrain suggests that stimulus categories may be represented by the engagement of different network structures. To characterise the formation of Go/No-Go associations at a deeper behavioural level, I developed a new hardware/software system for performing operant conditioning efficiently (Operanter). Using this system I found differences in the dynamics of how birds learn Go vs No-Go associations. I also observed large individual differences in daily patterns of activity, and found a relationship between learning rate and when birds prefer to be active. Finally, I tested whether passive unreinforced exposure to previously conditioned No/No-Go stimuli triggered differences in gross motor behaviour that might influence patterns of gene expression in the auditory forebrain but found no evidence to support this. In sum, these results suggest that Go/No-Go operant conditioning may drive two distinct types of learning, which may be reflected in subtle variations in gene expression in the auditory forebrain.

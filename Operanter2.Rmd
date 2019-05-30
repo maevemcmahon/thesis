@@ -1,0 +1,155 @@
+---
+title: "Operanter"
+output: html_document
+---
+```{r echo=FALSE, results="hide", message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(knitr)
+```
+
+#Initial validation of the Operanter system
+\chaptermark{Operanter validation}
+
+##Introduction
+After the development of Operanter, chronicled and described in Chapter 3, it was necessary to demonstrate that it could successfully be used to train zebra finches for experiments require Go/No-Go operant conditioning. The Operanter setup will be benchmarked against the Leiden University setup for the following reasons: 1) the Leiden University setup has been used in many published studies over the last decade [e.g. @Chen2015a; @Heijningen2009; @Holveck2014]; 2) the neurogenomic results from birds trained at Leiden University (described in Chapter 2) needed to be compared to neurogenomic results from an allied study that was conducted using Operanter; 3) due to Home Office inspector recommendations, and in contrast to the Leiden University apparatus that ran during all daylight hours, our operant conditioning apparatus will only run while an experimenter is on site. As such, a comparison of Operanter and the proprietary Leiden University apparatus will enable the comparison of neurogenomic data resulting from both laboratories.
+
+##Methods
+The following methods describe the work undertaken at the Clayton laboratory at Queen Mary University of London. Methods for the data describing the learning of the Leiden cohort of birds can be found in Chapter 2.
+
+###Animals
+23 female zebra finches (_Taeniopygia guttata_) originally from a breeding line at the University of Glasgow were bred at Queen Mary University of London in a large free breeding aviary (20-80 individuals, 3.9 m x 4.3 m). It is unknown which, if any, of the females here had previously been involved in breeding. Prior to the initiation of the experiment, they were then housed in a single sex aviary with 6-24 females at any given time (1.9 m x 2.0 m x 2.0 m high)  for at least a week before being placed singly into a sound attenuation chamber with an operant conditioning setup. The birds ranged in age from 332 to 909 days post hatch (mean = 558.8, sd = 200.2). The birds were kept on a 16:8 light cycle (7:00 to 23:00). Birds were given free access to food from 7:00 until 7:10, at which time the operant conditioning apparatus automatically initiated. Operant conditioning then continued until the experimenter left the premises, between 14:00 and 20:00. Animal housing and welfare were in compliance with the European directives for the protection of animals used for scientific purposes (2010/63/EU) under Procedures Project License PPL70-8183.
+
+###Apparatus
+The birds were housed in a sound attenuation chamber fitted with an operant conditioning cage (43 cm w x 46 cm d x 42 cm h). The cage had a solid floor and back, with mesh on the remaining four faces. The back of the cage contained the operant conditioning peripheral equipment: a motorised food hopper and two LED/peck detectors. A Jawbone Mini Jambox speaker was placed on top of the chamber. A Raspberry Pi automatically controlled the operant conditioning, including the food hopper, LED/peck detectors, speaker, and the chamber light (as described in Chapter 3). A total of eight chambers, with identical apparatus, were used.
+
+###Stimuli
+For all birds, the early training stages used a novel male zebra finch song and a sine wave tone (440 Hz). For the final training stage, each bird received two novel songs in a counterbalanced design: one as the Go stimulus and another as the No-Go stimulus. These songs were matched for duration and to be maximally acoustically different from each other. All songs were from the population of zebra finches at the University of Leiden, and were therefore novel to the birds in this study. The song recordings were edited in Praat to include a 10ms on and off ramp [@Praat]. 
+
+Final song playbacks were created using Audacity, and consisted of one of the stimuli (either Go or No-Go) repeated once every 10 seconds for 10 minutes, for a total number of 60 song playbacks. All stimuli were played at a SPL of 70 dB, measured using a Realistic sound level meter (Cat. No. 33-2050, RadioShack) on the fast setting at the location of the bird's head after pecking a sensor. Each bird received a final playback of either their Go or No-Go stimulus.
+
+###Operant conditioning
+The birds were allowed to acclimatise overnight to the sound attenuation chamber with _ad libitum_ access to food and water. Four hours after the lights came on, the food hopper closed and the birds began the first stage of training. Birds retained _ad libitum_ access to water and cuttlebone throughout the experiment. 
+
+The first stage of training involved the birds learning to associate a peck to either sensor and the subsequent opening of the food hopper for 10 seconds. Once the birds had pecked either sensor ~200 times, the birds progressed to stage two, when they had to learn to peck the sensors in sequence. During stage two, the birds were only rewarded with access to food if they first pecked the left sensor followed by the right sensor within 30 seconds of the first peck. This time was reduced to 6 seconds once the birds learned the pecking sequence. At this point, a song, which was not used for the final training, was played when the birds pecked the left sensor. 
+
+During the first and second stages of training, auto-shaping and hand-shaping was occasionally used to encourage the birds to learn more quickly. During stage one, auto-shaping was completed by navigating to the Direct Control tab of the Operanter GUI, flashing one or both of the LEDs, followed by opening the food hopper. By completing the auto-shaping procedure multiple times, birds learned the association between the LED and the food hopper, which encourages the birds to attempt to peck at the LED more quickly. During stage two, hand-shaping was completed by flashing the right LED after the bird pecked the left sensor, to encourage the bird to attend to the right LED and eventually peck it.
+
+The third stage of training introduced the Go/No-Go procedure. The birds were taught that if they pecked the left sensor and heard the song, they could peck the right sensor (Go response) and receive a food reward, as in the latter parts of stage two. However, punished trials were introduced at a rate of 80% rewarded to 20% punished. For these trials, a sine wave tone (440 Hz) was played when the bird pecked the left sensor; the bird had to learn not to peck the right sensor (No-Go response). If they did peck the right sensor, the chamber light would go out for 10 seconds and the bird would not receive a food reward. During stage four, the ratio of rewarded to punished trials was altered to 50% each.
+
+Following training, the birds were swapped to two novel songs as the Go and the No-Go stimuli. Once they learned this discrimination to a criterion of 0.80 discrimination ratio (defined as the proportion of correct responses to Go stimuli divided by the summed proportion of correct responses to Go stimuli and the proportion of incorrect responses to No-Go stimuli), they had to maintain their performance for 4-5 days before initiation of the final playback. 
+
+###Final playback
+The afternoon before final playback, the operant conditioning apparatus was disabled and birds were again allowed _ad libitum_ access to food. The following morning, between three and five hours after the lights came on, the final 10 minute playback was initiated. 20 minutes after the end of the playback, the bird was decapitated for an RNA-Seq experiment.
+
+###Statistics
+All statistics were carried out using the base stats package in R v3.3.3 unless otherwise noted.
+
+##Results
+Both the Leiden (n = 18) and the London (n = 23) cohorts of birds learned the discrimination between Go and No/Go. Trials were binned into 100-trial bins. d$'$, a measure of sensitivity defined as the z-score of the false alarm rate subtracted from the z-score of the hit rate, was calculated for all birds for all bins. These bins are plotted in \autoref{fig-leilon}. Those d$'$ scores were linearly modelled on the logarithm of the bin number. That model indicates that the Leiden birds reached a d$'$ of 2 after 7 100-trial bins, and the London birds reached the same d$'$ criterion after 8 100-trial bins.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-leilon}Learning curves for Leiden birds (proprietary system) and London birds (Operanter system).", fig.width=6}
+
+LeiData <- read.csv("./Data/LeidenActivity.csv")
+LeiData2 <- read.csv("./Data/Leiden_condition.csv")
+LeiData <- left_join(LeiData, LeiData2, by="BirdID") %>%
+  filter(Condition != "Hab")
+LonData <- read.csv("./Data/LondonActivity.csv")
+LeiData$BirdID <- as.factor(LeiData$BirdID)
+LonData$BirdID <- as.factor(LonData$BirdID)
+LonData <- LonData %>%
+  mutate(Cohort = "London") %>%
+  mutate(Bin = (Index - IndexBase) %/% 100) %>%
+  select(BirdID, Stimulus, Correct, Bin, Cohort)
+LonData$Cohort <- as.factor(LonData$Cohort)
+LeiData <- LeiData %>%
+  select(BirdID, Stimulus, Correct, Bin, Cohort)
+
+LeiLon <- bind_rows(LeiData, LonData)
+LeiLon$BirdID <- as.factor(LeiLon$BirdID)
+LeiLon$Cohort <- as.factor(LeiLon$Cohort)
+
+minBin <- 0
+maxBin <- 26
+Go <- LeiLon %>%
+  filter(Bin > minBin) %>%
+  filter(Bin < maxBin) %>%
+  filter(Stimulus=="GO") %>%
+  group_by(Bin, BirdID, Cohort) %>%
+  summarise(TotalGo = n())
+  
+NoGo <- LeiLon %>%
+  filter(Bin > minBin) %>%
+  filter(Bin < maxBin) %>%
+  filter(Stimulus=="NO-GO") %>%
+  group_by(Bin, BirdID, Cohort) %>%
+  summarise(TotalNoGo = n())
+
+CorrGo <- LeiLon %>%
+  filter(Bin > minBin) %>%
+  filter(Bin < maxBin) %>%
+  filter(Stimulus=="GO") %>%
+  group_by(Bin, BirdID, Cohort) %>%
+  summarise(CorrectGo = sum(Correct))
+
+CorrNoGo <- LeiLon %>%
+  filter(Bin > minBin) %>%
+  filter(Bin < maxBin) %>%
+  filter(Stimulus=="NO-GO") %>%
+  group_by(Bin, BirdID, Cohort) %>%
+  summarise(CorrectNoGo = sum(Correct))
+  
+GNG <- left_join(Go, NoGo, by=c('Bin', 'BirdID'))
+Corr <- left_join(CorrGo, CorrNoGo, by=c('Bin', 'BirdID'))
+All <- left_join(GNG, Corr, by=c('Bin', 'BirdID'))
+
+All <- All %>%
+  filter(!is.na(CorrectGo)) %>%
+  filter(!is.na(TotalGo)) %>%
+  filter(!is.na(CorrectNoGo)) %>%
+  filter(!is.na(TotalNoGo)) %>%
+  filter(BirdID != 301) %>%
+  select(Bin, BirdID, Cohort.x.x, TotalGo, TotalNoGo, CorrectGo, CorrectNoGo)
+
+All$Cohort <- All$Cohort.x.x
+
+All$zHIT <- qnorm(All$CorrectGo/All$TotalGo + 0.01)
+All$zFA <- qnorm(1- All$CorrectNoGo/All$TotalNoGo + 0.01)
+All$dr <- All$CorrectGo/All$TotalGo / (All$CorrectGo/All$TotalGo + (1 - (All$CorrectNoGo/All$TotalNoGo)))
+# correct responses to Go stimuli divided by the sum of the proportion correct responses to Go stimuli and the proportion incorrect responses to No-Go stimuli)
+All$dprime <- All$zHIT - All$zFA
+
+dplot <- ggplot(data=All, aes(x=Bin, y=dprime, color=Cohort)) + geom_point(aes(colour=Cohort)) + stat_smooth(method = "lm", formula = y ~ log(x), size=1) + ylab("d'") + xlab("100-trial bins") + theme_minimal()
+dplot
+
+
+#ns
+ns <- All %>%
+  group_by(Cohort) %>%
+  summarise(n_distinct(BirdID))
+
+#asymptotic 20-25
+asymAll <- All %>%
+  filter(Bin >= 20) %>%
+  group_by(BirdID, Cohort) %>%
+  summarise(avgd = mean(dprime, na.rm=TRUE))
+
+asym <- All %>%
+  filter(Bin >= 20) %>%
+  group_by(Cohort) %>%
+  summarise(avgd = mean(dprime, na.rm=TRUE))
+tresults <- t.test(asymAll$avgd[which(asymAll$Cohort == "London")], asymAll$avgd[which(asymAll$Cohort == "Leiden")])
+#hist(asymAll$avgd[which(asymAll$Cohort == "London")])
+#hist(asymAll$avgd[which(asymAll$Cohort == "Leiden")])
+```
+
+Zebra finches trained using the Operanter software and hardware achieved, on average, a lower asymptotic performance compared to zebra finches trained using proprietary software and hardware at the University of Leiden (\autoref{fig-leilon}). A two-sample _t_-test on bins 20-25 indicates that the final performance of the Leiden cohort is significantly better than the final performance of the London cohort (_t_(34.6) = -3.2, _p_ = 0.003).
+
+##Discussion
+23 female zebra finches were shown to successfully learn to discriminate two stimuli using Operanter, though the Leiden cohort birds did reach a higher asymptotic performance on average than the London cohort. This is likely due to significant differences in the conditioning protocol. Specifically, London birds were only trained until the experimenter went home, and received food _ad libitum_ after this time, to comply with UK Home Office recommendations; in contrast, birds at the University of Leiden never received food _ad libitum_ and engaged with the operant apparatus throughout the entire photoperiod. The discrimination performance of the London birds was determined to be sufficient for the purposes of the neurogenomic follow-up studies.
+
+I have developed an integrated hardware/software system for zebra finch operant conditioning. Operanter is more flexible than most open source or proprietary systems, and is substantially cheaper than all other published systems. To our knowledge, it incorporates more safety and welfare mechanisms than any alternative. It also has the specific advantage of comprising one independent machine per subject, reducing the possiblity of accidental interference by other researchers and of multiple systems failing at the same time.
+
+I have validated that Operanter is functional and effective, as demonstrated by its success with controlling operant conditioning training for 23 individuals shown here, as well as 17 additional individuals trained during later studies. As shown here, zebra finches can learn Go/No-Go discrimination in roughly the same number of trials as reported in previous literature [e.g. @Gess2011]. Additionally, the rate of learning of discrimination, if not asymptotic performance, is similar to that of birds trained using the proprietary system at our collaborator's facility at the University of Leiden.
+
+In conclusion, Operanter provides a much-needed open source alternative to commercial and proprietary operant conditioning setups. This system will allow us to proceed with the training of zebra finch operant learning of song discriminations, as will be described in the rest of my thesis. Operanter's robust data output can be easily transformed into tidy data [@Wickham2014], which is a feature I will take advantage of in Chapters 5 and 6.

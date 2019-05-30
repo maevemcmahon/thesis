@@ -1,0 +1,897 @@
+---
+title: "Behaviour"
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document: default
+  word_document: default
+---
+
+```{r echo=FALSE, results="hide", message=FALSE}
+##Setup everything
+#d <- read.csv("./Data/totalsummaryRNA.csv")
+d2 <- read.csv("./Data/totalsummaryRNA_withTimeOfDay.csv")
+
+
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(cowplot)
+library(RColorBrewer)
+library(cowplot)
+library(gghighlight)
+
+# #Setup defaults and custom functions
+# op <- options(digits.secs = 3)
+# ms_to_date = function(ms, t0="1970-01-01", timezone) {
+#         sec = ms / 1000
+#         options(op)
+#         as.POSIXct(sec, origin=t0, tz=timezone)
+# }
+# 
+# calctime = function(time){
+#   stod <- c(1:length(time))
+#   for (i in 1:length(time)){
+#     date <- ms_to_date(time[i], timezone="Europe/London")
+#     tod <- str_split(date, " ") 
+#     tod <- tod[[1]][2]
+#     tod2 <- str_split(tod, ":")
+#     stod[i] <- as.numeric(tod2[[1]][1])*3600 +   as.numeric(tod2[[1]][2])*60 + as.numeric(tod2[[1]][3])
+#   }
+#   stod
+# }
+# 
+# #Calculate a new column called TimeOfDay, which is "seconds from most recent midnight"
+# d2 <- d
+# d2$TimeOfDay <- calctime(d2$TimeInMillis)
+# 
+# write.csv(d2, "~/Documents/Behavioural RNASeq Work/totalsummary_withTimeOfDay.csv")
+# Now you can read in read.csv("totalsummary_withTimeOfDay.csv") and skip calctime calculations
+
+
+subd <- d2 %>%
+  filter(Phase=="F5050GoNoGo") %>%
+  group_by(BirdID) %>%
+  mutate(IndexBase = min(Index)) %>%
+  mutate(Bin = (Index - IndexBase) %/% 100) %>%
+  mutate(Bin20 = (Index - IndexBase) %/% 20)
+```
+#Characterising Go/No-Go learning and maintenance behaviour in the zebra finch
+\chaptermark{Characterising response behaviours}
+
+Go/No-Go operant conditioning is regularly used by ethologists to investigate perception in zebra finches. Despite this rich literature, little work has been done to investigate how the zebra finches learn this task. Here I avail of a large dataset of simple Go/No-Go discrimination learning of a conspecific song, and long-term maintenance of this discrimination behaviour. I find that the rate of learning the correct responses to Go and No-Go stimuli varies, with birds taking longer to learn to inhibit the No-Go response. Response latencies, or the interval from stimulus onset to pecking response, also vary between Go and No-Go stimuli, with incorrect responses to No-Go stimuli having longer latencies than correct responses to Go stimuli. I highlight large individual differences in daily patterns of activity, and demonstrate a relationship between learning rate and when birds prefer to be active. I also find that response accuracy during maintenance can be affected by time of day, inter-trial interval duration, accuracy on the preceding trial and stimulus type. These results have numerous implications for experimenters using Go/No-Go operant conditioning.
+
+\pagebreak
+
+##Introduction
+The Go/No-Go paradigm is a form of operant conditioning where a subject is trained to associate the Go stimulus with a reward and the No-Go stimulus with a punishment [@Evans1970]. It does this by learning to produce the Go behaviour in response to the Go stimulus, which results in the presentation of a reinforcement; it must also learn to make the No-Go behaviour in response to the No-Go stimulus, as the Go behaviour results in the presentation of a punishment. Go/No-Go conditioning is frequently used for investigations of animal perception due to the ability of researchers to extract information about perceptual abilities from simple, easily measured behavioural responses [e.g. @Chen2015a; @Long2015]. But despite a long history of investigation of fundamental operant conditioning variables, such as reinforcement frequency [e.g. @Herrnstein1961; @Skinner1938], and more recent attempts to understand specific cognitive aspects of Go/No-Go learning, such as working memory and behavioural inhibition [e.g. @Kalenscher2005; @Thomas2009; @Yechiam2006], we still do not understand what facets of perception and decision making are captured by the binomial measure of response accuracy to presentations of Go and No-Go stimuli.
+
+Classical conditioning, or the learning of stimulus-outcome associations, is often contrasted with operant conditioning, or the learning of response-outcome associations [@Kirsch2004]. But Go/No-Go operant conditioning goes beyond the simple response-outcome association, and, in fact, creates a stimulus-response-outcome association. That is, Go/No-Go creates "expectancies of particular outcomes when certain responses are emitted in the presence of an occasion setting (discriminative) stimulus" [@Kirsch2004, p 378]. Therefore, in contrast to simple operant conditioning paradigms, such as shaping, a thorough characterisation of Go/No-Go learning could benefit from our understanding of both classical and operant conditioning. Moreover, as Go/No-Go learning involves discrimination, the use of analytical methodologies derived from signal detection theory has enhanced researchers' ability to use to use behavioural outputs to understand animal behaviour and perception [@Kim2008; @Long2015; @Nevin1969].
+
+Responses to Go/No-Go-trained stimuli have occasionally been compared to responses to alternative operant conditioning paradigms. 2-alternative forced choice (2-AFC) and Go/No-Go behavioural responses are both subject to bias (e.g. subjects can have a left or right bias for 2-AFC [@Riebel1998], and a Go or No-Go bias for Go/No-Go [@Carandini2013]) and response behaviours can be assessed with signal detection theory in order to quantify those biases [@Klink2006]. However, the responses are not always equivalent: adaptation to probe stimuli (i.e. novel/untrained stimuli to which subjects respond with a Go or No-Go behaviour, embedded in a stream of trained stimuli) can change the bias of making the Go response, but this does not occur in 2-AFC [@Long2015]. Peak shift is a feature of discrimination learning whereby an organism responds most to probe stimuli that are most displaced from the reinforced stimulus along a dimension opposite to the punished stimulus [@Purtle1973]. In Go/No-Go paradigms, peak shift will cause greater analytical difficulties than in 2-AFC paradigms; only one bias can be calculated for Go/No-Go due to the response behaviour being simply Go or No-Go, whereas three biases can be calculated for 2-AFC (responding left, responding right, and responding left or right when a response is made). Additionally, the Go/No-Go bias can be altered by a wider range of factors, such as motivation, than the 2-AFC biases. A more thorough characterisation of responses during Go/No-Go learning and maintenance without probe stimuli will therefore aid researchers in understanding experiments that use the response to probe stimuli to interrogate perception.
+
+###Motivational factors in operant conditioning
+Motivation plays multiple roles in operant conditioning. For example, the valence of and preference for the reinforcement can alter the motivation of subjects to engage in the operant behaviour [@Holveck2014; @Sclafani2016]. Strong reinforcement schedules using food as a reward may lead to satiation and a decrease in production of the response behaviour [as reviewed in @McSweeney1993]. For experiments where the operant stimulus is, itself, a reinforcement (e.g. Go/No-Go experiments on female birds where the stimuli are conspecific songs), subjects might initiate trials to receive the inherently rewarding stimulus, with no motivation to produce the reinforced behaviour. Within a Go/No-Go experimental design, this, of course, could lead to a No-Go bias. Further, the choice of the reinforcement and punishment can affect the ease with which subjects learn associations [@Scheiner1999; @Stebbins1959], and the discriminability of the two stimuli also affects the learning rate [@Hagmann2010; @Frontali1974]. As some subjects appear to become frustrated with the operant conditioning apparatus when regularly unsuccessful, the relative valence of reinforcement/punishment and stimulus discriminability may affect the subjects' motivation to produce responses (McMahon, pers. obs.).
+
+Additionally, in standard avian perceptual operant conditioning, birds choose when to initiate the trials. Hunger, desire to hear the stimulus, or desire for enrichment could all affect the motivation of the bird to intiate a trial. Zebra finch operant conditioning generally lasts through the entire photoperiod [e.g. @Spierings2014], but our laboratory recently reduced the operant conditioning period to morning and afternoon (but not evening) in an effort to improve animal welfare. The animal welfare inspector believed that a subject becoming injured during unsupervised conditioning during the evening was a risk we should not take. However, I believe that two factors may outweigh that risk: the lack of enrichment during evening hours due to the inability of a bird to initiate the presentation of intrinsically rewarding stimuli, and the possibility that social isolation might be extended if the birds require more days to reach training criterion. Therefore, a characterisation of trial initiation times could enhance our understanding of response behaviour during training and maintenance, and may also aid in the improvement of our experimental procedure.
+
+Trial timing has been explored in multiple contexts, including the massed versus spaced trial timing framework [as reviewed in @Delaney2010]. In one early study of pigeon short-term memory, spacing out the inter-trial interval led to reduced memory retention [@Roberts1972]. However, a wide body of literature has suggested that spaced trials may enhance learning compared to massed trials in classical conditioning [e.g. @Spence1950] and in autoshaping [e.g. @Gibbon1977b]. In the present study design, zebra finches will initiate their own trials, and the inter-trial interval duration may influence the accuracy of the responding.
+
+As well as inter-trial interval timing, the time of day may have an effect on learning and accuracy. Human children learn best when they study during their preferred time of day, suggesting that individual differences in attention through the day may affect learning rate [@Ammons1995]. For university students, memories stored in the evening appear to be more easily recalled the next day than memories stored in the morning [@Payne2012]. Additionally, female zebra finches are likely to be accustomed to exposure to male song primarily in the morning [@Jha2017] and will of course have their own patterns of daily activity [@Dall1998]. Therefore, I was interested in determining if there is an ideal time of day to administer the operant training in order to reduce the total duration spent in the isolation chamber, and also interested in whether individual differences in the timing of trial initiation correlate with response accuracy and learning rate.
+
+###Response behaviours to Go/No-Go tasks
+The response behaviours to Go/No-Go tasks themselves also require further characterisation. Unlike 2-AFC, where both stimuli require a similar motor behaviour for reinforcement, Go/No-Go requires a motor behaviour in response to one stimulus and a withholding of that behaviour in response to another stimulus. As such, Go/No-Go tasks have often been used to investigate inhibition of behaviours, and much work has been done on understanding whether the Go and No-Go responses are fundamentally different [@Roy2009]. Specifically, there is evidence that the production of the No-Go behaviour is more effortful than production of the Go behaviour [@Gao2017; @Shenoy2012a]. One meta-analysis suggests that electrophysiological signals measured in human Go/No-Go task performance primarily reflect differences in attentional resources, and not differences in motor responses or inhibition processes [@Criaud2013]. Of critical importance is that human studies of Go/No-Go tasks do not require operant conditioning, and certainly do not involve the long-term acquisition and storage of associative memories that are involved in animal Go/No-Go operant conditioning tasks. In contrast, human Go/No-Go task discriminations are held in working memory and subjects respond without reference to long-term memory. Therefore, it is unclear to what extent we might expect to see similar patterns of effortfulness in avian Go/No-Go operant conditioning, but provisional support for these patterns could be found by measuring bias during learning.
+
+Response latency has been used in many non-operant conditioning studies as a proxy for memory [e.g. @Klein1970]. In contrast, almost all animal operant conditioning experiments use response accuracy to assess learning [e.g. @Beckers2003; @Bregman2016; @Brodigan1976]. Response accuracy is simple to measure and intuitive, but provides far less resolution per trial than response latency. As some subjects learn to produce the No-Go response to No-Go stimuli very slowly with little change in response accuracy for multiple days (i.e. correct responses are subject to a floor effect), the development of response latency as a variable for assessing learning in animal operant conditioning might provide higher resolution to experimenters. Further, after learning, when error rates are negligible (i.e. correct responses are subject to a ceiling effect), response latencies may provide fine-grained information on subject performance [@Kahana1999]. Though previous studies have not found that response latency is more sensitive than response accuracy [@MacLeod1984], this might not be true for all states of the Go/No-Go operant conditioning procedure, especially those states at the beginning and end of training when response accuracy sensitivity is extremely low due to floor and ceiling effects.
+
+However, response latency and response accuracy do not necessarily measure the same aspect of memory: speed-accuracy tradeoffs exist [@Reed1973], and response latency and accuracy have been suggested to measure two separate aspects of memory retrieval [@MacLeod1984]. Specifically, it has been theorised that response accuracy measures whether the memory encoding process was efficient for retrieval, whereas response latency measures the number of decoding steps during retrieval [@MacLeod1984]. In contrast, Anderson characterised response accuracy as being an indication of the probability of a trace (a connection between stimuli and/or concepts) being formed or the probability of a trace not being able to be activated, and he characterised response latency as the level of activation of a trace [-@Anderson1981]. What MacLeod (1984) and Anderson (1981) have in common is the conceptualisation of response accuracy and response latency as measuring two separate aspects of memory. The characterisation of response latencies, particularly by comparing change in response latency with change in response accuracy, during avian Go/No-Go conditioning could be of value to researchers who use this methodology.
+
+###Aims and hypotheses
+In order to characterise the Go/No-Go discrimination of conspecific song stimuli, we utilised a large dataset of straightforward single conspecific song discrimination learning and maintenance. We predicted that motivation to hear male song would interact with hunger levels, and that this would be seen as a change in response bias throughout the day. We also predicted that birds would more rapidly reach criterion for the Go stimuli than for the No-Go stimuli. As previously seen in Chapter 4, Leiden birds were on average faster to reach our discrimination criterion than London birds, despite using a similar training methodology. We hypothesised that this could be caused by the longer time window during each day that London birds did not engage in training. Finally, we aimed to characterise response latencies to No-Go stimuli to determine if they can be used as a finely tuned continuous indicator of learning performance. We also aimed to develop a model for predicting response accuracy during maintenance trials to better understand the factors that drive the birds' response decisions after the initial learning of the discrimination.
+
+##Methods
+
+###Animals
+24 female zebra finches (_Taeniopygia guttata_) originally from a breeding line at the University of Glasgow were bred at Queen Mary University of London in a large free breeding aviary (20-80 individuals, 3.9 m x 4.3 m). It is unknown which, if any, of the females here had previously been involved in breeding. Prior to the initiation of the experiment, they were then housed in a single sex aviary with 6-24 females at any given time (1.9 m x 2.0 m x 2.0 m high) for at least a week before being placed singly into a sound attenuation chamber with an operant conditioning setup. The birds ranged in age from 332 to 909 days post hatch (mean = 558.8, sd = 200.2). The birds were kept on a 16:8 light cycle (7:00 to 23:00). Birds were given free access to food from 7:00 until 7:10, at which time the operant conditioning apparatus automatically initiated. Operant conditioning then continued until the experimenter left the premises, between 14:00 and 20:00. Animal housing and welfare were in compliance with the European directives for the protection of animals used for scientific purposes (2010/63/EU) under Procedures Project License PPL70-8183.
+
+###Apparatus
+The birds were housed in a sound attenuation chamber fitted with an operant conditioning cage (43 cm w x 46 cm d x 42 cm h). The cage had a solid floor and back, with mesh on the remaining four faces. The back of the cage contained the operant conditioning peripheral equipment: a motorised food hopper and two LED/peck detectors. A Jawbone Mini Jambox speaker was placed on top of the chamber. A Raspberry Pi automatically controlled the operant conditioning, including the food hopper, LED/peck detectors, speaker, and the chamber light (as described in Chapter 3; \autoref{fig-londonsetup}). 
+
+```{r echo=FALSE, fig.cap="\\label{fig-londonsetup}Diagram of the operant conditioning apparatus in the sound attenuation chamber. The setup includes two infrared detectors with green LEDs and a horizontally mounted motorised food hopper opening. "}
+include_graphics('./External_images/london_setup.pdf')
+```
+
+###Stimuli
+For all birds, the early training stages used a novel male zebra finch song and sine wave tone. For the final training stage, each bird received two novel songs in a counterbalanced design: one as the Go stimulus and another as the No-Go stimulus. These songs were matched for duration. All songs were from the population of zebra finches at the University of Leiden, and were therefore novel to the birds in this study. The song recordings were edited in Praat to include a 10ms on and off ramp [@Praat]. 
+
+Final song playbacks were created using Audacity, and consisted of one of the stimuli (either Go or No-Go) repeated once every 10 seconds for 10 minutes, for a total number of 60 song playbacks. All stimuli were played at a SPL of 70 dB, measured using a Realistic sound level meter (Cat. No. 33-2050, RadioShack) on the fast setting at the location of the bird's head after pecking a sensor. Each bird received a final playback of either their Go or No-Go stimulus.
+
+###Operant conditioning
+The birds were allowed to acclimatise overnight to the sound attenuation chamber with _ad libitum_ access to food and water. Four hours after the lights came on, the food hopper closed and the birds began the first stage of training. Birds retained _ad libitum_ access to water and cuttlebone throughout the experiment. 
+
+The first stage of training involved the birds learning to associate a peck to either sensor and the subsequent opening of the food hopper for 10 seconds. Once the birds had pecked either sensor ~200 times, the birds progressed to stage two, when they had to learn to peck the sensors in sequence. During stage two, the birds were only rewarded with access to food if they first pecked the left sensor followed by the right sensor within 30 seconds of the first peck. This time was reduced to 6 seconds once the birds learned the pecking sequence. At this point, a song, which was not used for the final training, was played when the birds pecked the left sensor. 
+
+The third stage of training introduced the Go/No-Go procedure. The birds were taught that if they pecked the left sensor and heard the song, they could peck the right sensor (Go response) and receive a food reward, as in the latter parts of stage two. However, punished trials were introduced at a rate of 80% rewarded to 20% punished. For these trials, a sine wave tone (440 Hz) was played when the bird pecked the left sensor; the bird had to learn not to peck the right sensor (No-Go response). If they did peck the right sensor, the chamber light would go out for 10 seconds and the bird would not receive a food reward. During stage four, the ratio of rewarded to punished trials was altered to 50% each.
+
+Following training, the birds were swapped to two novel songs as the Go and the No-Go stimuli. Once they learned this discrimination to a criterion of 0.80 discrimination ratio (defined as the proportion of correct responses to Go stimuli divided by the summed proportion of correct responses to Go stimuli and the proportion of incorrect responses to No-Go stimuli), they had to maintain their performance for 4-5 days before initiation of the final playback. 
+
+###Final playback
+The afternoon before final playback, the operant conditioning apparatus was disabled and birds were again allowed _ad libitum_ access to food. The following morning, between three and five hours after the lights came on, the final 10 minute playback was initiated. 20 minutes after the end of the playback, the bird was decapitated for an RNA-Seq experiment.
+
+###Statistics
+All statistics were carried out using the base stats package in R v3.3.3 unless otherwise noted.
+
+##Results
+
+###Go and No-Go stimuli are learned at different rates
+In order to characterise differential learning of the Go and the No-Go stimuli, an analysis of the learning curves was undertaken. From the first presentation of the two song stimuli, birds took longer to achieve 80% correct responses to No-Go stimuli (median < 400 trials) than they did to achieve 80% correct responses to Go stimuli (median < 100 trials) (W = 50, _p_ = 0.0001; two-sample Wilcoxon rank-sum test) The averaged learning curves for all individuals show that the Go and the No-Go stimuli are not learned at the same rate (\autoref{fig-learningplot}. Panel A of \autoref{fig-learningplot} shows the proportion of correct responses to Go and No-Go stimuli, fitted with a loess regression (R packages: ggplot2). This figure also illustrates that birds, on average, reached asymptotic performance after the presentation of around 1000 trials (i.e. bin 10). Further, after 3000 trials (i.e. bin 30), many birds had completed the training. For this reason, all time-of-day analyses presented below are based on data from trials 1000-3000, which should be considered the average maintenance stage. Bins after 3000 trials are less frequent, due to fewer birds remaining in the experiment, and the visible decline in correct responses to No-Go stimuli after this point is likely an artefact due to small sample sizes. Panel B of \autoref{fig-learningplot} shows the proportion of Go responses to Go and No-Go stimuli, with bin fraction (100-trial bin number divided by the maximum bin number for each bird) on the x-axis. Therefore, these curves have been normalised to remove learning rate (line of best fit modelled with a loess regression using ggplot2). This further illustrates that birds were slower to learn the correct response to No-Go stimuli than the response to Go stimuli.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-learningplot}Averaged learning curves for all birds. A) Proportion of correct trials for 100-trial bins. B) Proportion of Go responses, normalised for each bird, where bin fraction is the bin number divided by the maximum number of bins for each bird. Lines of best fit are modelled with loess regression, with standard error shading.", fig.width=8, fig.height=4}
+# condData <- read.csv("./Data/BirdDataRNA.csv")
+# condData$BirdID <- as.factor(condData$BirdID)
+# subd <- left_join(subd, condData)
+# 
+# subd <- subd %>%
+#   filter(Condition != "Hab")
+accuracy <- subd %>%
+  filter(Latency < 6500) %>%
+  group_by(BirdID, Bin, Stimulus) %>% 
+  summarise(PropCorr = mean(Correct))
+
+
+maxBins <- accuracy %>%
+  group_by(BirdID) %>%
+  summarise(maxBin = max(Bin))
+newstats  <- left_join(maxBins, accuracy, by="BirdID") 
+newstats$PropGo <- newstats$PropCorr
+
+newstats$PropGo <- 0
+for (i in 1:length(newstats$PropCorr)) {
+  if (newstats$Stimulus[i] == "GO") {
+    newstats$PropGo[i] <- newstats$PropCorr[i]
+  }
+  if (newstats$Stimulus[i] == "NO-GO") {
+    newstats$PropGo[i] <- 1 - newstats$PropCorr[i]
+  }
+}
+
+accplot1 <- ggplot(data=newstats, aes(Bin, PropCorr, group=Stimulus, colour=Stimulus)) + geom_smooth() + geom_point(alpha=.2) + xlim(0,50) + xlab("100-trial bin") + ylab("Proportion correct response") + theme(legend.position="none") + scale_colour_brewer(palette = "Dark2")
+
+accplot2 <- ggplot(data=newstats, aes(Bin/maxBin, PropGo, group=Stimulus, colour=Stimulus)) + geom_smooth() + geom_point(alpha=.2) + xlab("Fraction of bins") + ylab("Proportion Go response") + scale_colour_brewer(palette = "Dark2")
+
+plot_grid(accplot1, accplot2, rel_widths=c(1, 1.4), labels="AUTO")
+```
+
+###Birds have a Go response bias during early training
+In order to further characterise the learning process, an assessment of response bias during learning was conducted. Response bias (c; mean of the sum of the z-score of the hit rate and z-score of the false alarm rate, multiplied by -1) is roughly independent of accuracy and provides a good indication of bias when performance is at or near chance; it therefore provides an indication of whether the bird had a tendency to Go or to No-Go during learning, regardless of the stimulus [@Macmillan1990]. A series of one-sample Wilcoxon rank-sum tests was carried out on the first 10 100-trial bins (with Bonferroni correction for multiple testing). \autoref{fig-biaslearningplot} shows that for the first 400 trials, birds had a slight bias towards a Go response, regardless of whether the stimulus presented was a Go or a No-Go song. This bias does not reliably continue throughout late learning and maintenance.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-biaslearningplot}Bias (c) for first 10 100-trial bins, where scores > 1 indicate a No-Go bias and scores < 1 indicate a Go bias. Asterisks indicate significance at the 0.05 level (with Bonferroni correction).", fig.width=6 }
+#d' and c' through learning
+minLatency <- 7000
+minBin <- 0
+maxBin <- 11
+
+Go <- subd %>%
+  filter(Latency < minLatency) %>%
+  filter(Bin > minBin) %>%
+  filter(Bin < maxBin) %>%
+  filter(Stimulus=="GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(TotalGo = n())
+  
+NoGo <- subd %>%
+  filter(Latency < minLatency) %>%
+  filter(Bin> minBin) %>%
+  filter(Bin< maxBin) %>%
+  filter(Stimulus=="NO-GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(TotalNoGo = n())
+
+CorrGo <- subd %>%
+  filter(Latency < minLatency) %>%
+  filter(Bin> minBin) %>%
+  filter(Bin< maxBin) %>%
+  filter(Stimulus=="GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(CorrectGo = sum(Correct))
+
+CorrNoGo <- subd %>%
+  filter(Latency < minLatency) %>%
+  filter(Bin> minBin) %>%
+  filter(Bin< maxBin) %>%
+  filter(Stimulus=="NO-GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(CorrectNoGo = sum(Correct))
+  
+GNG <- left_join(Go, NoGo, by=c('Bin', 'BirdID'))
+Corr <- left_join(CorrGo, CorrNoGo, by=c('Bin', 'BirdID'))
+Total <- left_join(GNG, Corr, by=c('Bin', 'BirdID'))
+
+Total <- Total %>%
+  filter(!is.na(CorrectGo)) %>%
+  filter(!is.na(TotalGo)) %>%
+  filter(!is.na(CorrectNoGo)) %>%
+  filter(!is.na(TotalNoGo))
+
+Total$PropCorrGo <- Total$CorrectGo/Total$TotalGo
+Total$PropCorrNoGo <- Total$CorrectNoGo/Total$TotalNoGo
+Total$zHIT <- qnorm(Total$PropCorrGo)
+Total$zFA <- qnorm(1- Total$PropCorrNoGo)
+Total$zHIT[Total$zHIT==Inf & Total$zHIT > 0] <- 3.09
+Total$zHIT[Total$zHIT==-Inf & Total$zHIT < 0] <- -3.09  
+Total$zFA[Total$zFA==Inf & Total$zFA > 0] <- 3.09
+Total$zFA[Total$zFA==-Inf & Total$zFA < 0] <- -3.09
+Total$dprime <- Total$zHIT - Total$zFA
+Total$dprime <- Total$zHIT - Total$zFA
+Total$c <- -0.5 * (Total$zHIT + Total$zFA)
+Total$cprime <- Total$c / (Total$dprime + 0.1)
+Total$dr <- Total$CorrectGo/Total$TotalGo / (Total$CorrectGo/Total$TotalGo + (1 - (Total$CorrectNoGo/Total$TotalNoGo)))
+# correct responses to Go stimuli divided by the sum of the proportion correct responses to Go stimuli and the proportion incorrect responses to No-Go stimuli)
+
+
+learningData <- Total %>%
+  filter(Bin < 11) %>%
+  filter(c < 2)
+
+biasres <- 0
+newalpha <- 0.05/10 # 0.0056
+for (i in 1:10){
+  bin <- learningData %>%
+    filter(Bin==i)
+  res <- wilcox.test(bin$c) #same results for t.test
+  biasres[i] <- res$p.value
+}
+results <- biasres > newalpha
+
+plot1 <- ggplot(data=learningData, aes(x=Bin, y=c, group=Bin)) + geom_boxplot() + xlab("100-trial bin") + ylab("Bias (c)") + theme(legend.position="none") + ylim(-2, 2) + 
+  annotate("text", y=1.5, x=1, label="*", size=10) + 
+  annotate("text", y=1.5, x=2, label="*", size=10) + 
+  annotate("text", y=1.5, x=3, label="*", size=10) + 
+  annotate("text", y=1.5, x=4, label="*", size=10) + 
+  annotate("text", y=1.5, x=8, label="*", size=10) +
+  scale_x_continuous(breaks=c(1,2,3,4,5,6,7,8,9,10)) +
+  geom_hline(yintercept=0, alpha=.5)
+plot1
+
+##################
+GoBins <- Total %>%
+  group_by(BirdID) %>%
+  mutate(isFinishGo = PropCorrGo > 0.8 & !duplicated(PropCorrGo > 0.8)) %>%
+  filter(isFinishGo == TRUE) %>%
+  select(BirdID, Bin) %>%
+  mutate(minBinGo = Bin) %>%
+  select(BirdID, minBinGo)
+
+NoGoBins <- Total %>%
+  group_by(BirdID) %>%
+  mutate(isFinishNoGo = PropCorrNoGo > 0.8 & !duplicated(PropCorrNoGo > 0.8)) %>%
+  filter(isFinishNoGo == TRUE) %>%
+  select(BirdID, Bin) %>%
+  mutate(minBinNoGo = Bin) %>%
+  select(BirdID, minBinNoGo)
+GoNoGoBins <- left_join(GoBins, NoGoBins, by="BirdID")
+wilres <- wilcox.test(GoNoGoBins$minBinGo, GoNoGoBins$minBinNoGo)
+medGo <- median(GoNoGoBins$minBinGo, na.rm=TRUE)
+medNoGo <- median(GoNoGoBins$minBinNoGo, na.rm=TRUE)
+
+
+```
+
+###Response latencies during learning and maintenance
+To further characterise the patterns of responses to Go and No-Go stimuli, response latencies throughout learning and maintenance were compared. Response latencies to Go and No-Go stimuli appear qualitatively different, with longer latencies for incorrect responses to No-Go stimuli throughout learning and maintenance (\autoref{fig-responselatency}). Response latencies also appear to subtly vary between learning and maintenance for Go stimuli, with fewer long latencies during the maintenance stage than during learning (\autoref{fig-responselatency}; Panel A). In contrast, for No-Go stimuli, response latencies appear to diverge into a bimodal distribution during maintenance (\autoref{fig-responselatency}; Panel C). Three outliers who learned extremely slowly were removed for this analysis.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-responselatency}Response latencies (in milliseconds) to stimuli throughout learning and maintenance. Panel A is correct responses to Go stimuli; Panel B is incorrect responses to No-Go stimuli.", fig.width=8, fig.height=4 }
+
+
+# subLatNOBIN <- subd %>%
+#   filter(Stimulus=="NO-GO" & Correct==0) %>%
+#   filter(Latency < 6000) %>%
+#   filter(Latency > 20)
+# subLatPlot <- ggplot(subLatNOBIN) + geom_point(aes(Index-IndexBase, Latency), shape=16, size=1) + ylab("Latency (ms)") + xlab("Trial index") + theme(legend.position="none") + gghighlight(BirdID %in% c("067", "451", "E176DC"))
+
+subLatNOBINSansOutliers <- subd %>%
+  filter(Stimulus=="NO-GO" & Correct==0) %>%
+  filter(Latency < 6000) %>%
+  filter(Latency > 20) %>%
+  filter(BirdID != "067") %>%
+  filter(BirdID != "451") %>%
+  filter(BirdID != "E176DC") 
+subLatPlotSansOutliers <- ggplot(subLatNOBINSansOutliers, aes(Index-IndexBase, Latency)) + geom_point(alpha=0.2, shape=16, size=1) + ylab("Latency (ms)") + xlab("Trial index") + theme(legend.position="none")
+
+# GOsubLatNOBIN <- subd %>%
+#   filter(Stimulus=="GO" & Correct==1) %>%
+#   filter(Latency < 6000) %>%
+#   filter(Latency > 20)
+# GOsubLatPlot <- ggplot(GOsubLatNOBIN, aes(Index-IndexBase, Latency)) + geom_point(shape=16, size=1)+ ylab("Latency (ms)") + xlab("Trial index") + theme(legend.position="none") + gghighlight(BirdID %in% c("067", "451", "E176DC"))
+
+GOsubLatNOBINSansOutliers <- subd %>%
+  filter(Stimulus=="GO" & Correct==1) %>%
+  filter(Latency < 6000) %>%
+  filter(Latency > 20) %>%
+  filter(BirdID != "067") %>%
+  filter(BirdID != "451") %>%
+  filter(BirdID != "E176DC") 
+GOsubLatPlotSansOutliers <- ggplot(GOsubLatNOBINSansOutliers, aes(Index-IndexBase, Latency)) + geom_point(alpha=0.2, shape=16, size=1) + ylab("Latency (ms)") + xlab("Trial index") + theme(legend.position="none")
+
+
+plot_grid(GOsubLatPlotSansOutliers, subLatPlotSansOutliers, labels="AUTO")
+```
+
+In order to further characterise these differences, response latencies during learning (trials 1-1000) were explicitly compared to response latencies during maintenance (trials 1001-2000) for all non-outlier birds (i.e. the birds represented in Panels B and D in \autoref{fig-responselatency}). Response latencies during learning were from a significantly different distribution than response latencies during maintenance for No-Go stimuli (two sample Kolmogorov-Smirnov test, D = 0.15, _p_ < 0.0001), and for Go stimuli (two sample Kolmogorov-Smirnov test, D = 0.051, _p_ < 0.0001). Though both Kolmogorov-Smirnov tests show significant differences due to the large sample sizes, the difference in response latencies appears to be much stronger and more qualitatively distinctive for the No-Go stimuli than for the Go stimuli (\autoref{fig-responselatencyHistograms}). For the Go stimuli, response latencies shorten, with frequencies on the long right-hand tail diminishing during maintenance (t-test on log-transformed latencies, _t_(17082) = 3.71, _p_ = 0.0002; \autoref{fig-responselatencyHistograms}; Panels A & B). In contrast, for the No-Go stimuli, response latencies diverge during maintenance into a bimodal distribution, with a relatively increasing frequency of long-latency responses (\autoref{fig-responselatencyHistograms}; Panels C & D).
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-responselatencyHistograms}Response latencies in milliseconds. A & B) Correct responses to Go stimuli. C & D) Incorrect responses to No-Go stimuli. A & C) During learning (trials 1-1000). B & D) During maintenance (trials 1001-2000).", fig.width=6, fig.height=6 }
+firstLat <- subLatNOBINSansOutliers %>%
+  filter(Bin < 10)
+lastLat <- subLatNOBINSansOutliers %>%
+  filter(Bin >9  & Bin < 20)
+
+firstLatGo <- GOsubLatNOBINSansOutliers %>%
+  filter(Bin < 10)
+lastLatGo <- GOsubLatNOBINSansOutliers %>%
+  filter(Bin >9 & Bin < 20)
+
+firstLatPlot <- ggplot(firstLat, aes(Latency)) + geom_histogram(bins=20) + ylab("Frequency") + xlab("Latency (ms)") 
+lastLatPlot <- ggplot(lastLat, aes(Latency)) + geom_histogram(bins=20) + ylab("Frequency") + xlab("Latency (ms)")
+firstLatGoPlot <- ggplot(firstLatGo, aes(Latency)) + geom_histogram(bins=20) + ylab("Frequency") + xlab("Latency (ms)")
+lastLatGoPlot <- ggplot(lastLatGo, aes(Latency)) + geom_histogram(bins=20) + ylab("Frequency") + xlab("Latency (ms)") 
+plot_grid(firstLatGoPlot, lastLatGoPlot, firstLatPlot, lastLatPlot, labels="AUTO")
+
+nogotest <- ks.test(firstLat$Latency, lastLat$Latency)
+gotest <- ks.test(firstLatGo$Latency, lastLatGo$Latency)
+gotest2 <- t.test(log(firstLatGo$Latency), log(lastLatGo$Latency))
+
+```
+
+The difference between Go and No-Go response latencies during the maintenance stage can be described by plotting both on the same histogram. Specifically, a randomly generated normal distribution based on the mean and standard deviation of log-transformed Go response latencies was plotted alongside raw No-Go latencies;  the length of the Go response latency normal distribution vector was determined by manually aligning the peak of the Go and No-Go response latency distributions (\autoref{fig-responselatencyGNG}). The No-Go latencies tend to be longer and do not follow a normal distribution after log transformation. Further, the maintenance stage Go and No-Go response latencies are not from the same distributions (Kolmogorov-Smirnov test; D = 0.43, _p_ < 0.0001).
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-responselatencyGNG}Histogram of Go and No-Go response latencies during maintenance. Red bars indicate a generated normal distribution that describes Go response latencies. Blue bars indicate raw No-Go latencies. The purple region is where Go and No-Go response latencies overlap."}
+
+Gomean <- mean(log(lastLatGo$Latency))
+Gosd <- sd(log(lastLatGo$Latency))
+Gonumber <- length(lastLatGo$Latency)
+
+NoGomean <- mean(log(lastLat$Latency))
+NoGosd <- sd(log(lastLat$Latency))
+NoGonumber <- length(lastLat$Latency)
+
+denominator <- 2.5
+GodistT <- rnorm(NoGonumber %/% denominator, mean=Gomean, sd=Gosd)
+Godist <- exp(GodistT)
+
+dists <- c(Godist, lastLat$Latency)
+s1 <- rep("Go", NoGonumber %/% denominator)
+s2 <- rep("NoGo", NoGonumber)
+Condition <- c(s1, s2)
+
+distData <- data.frame(dists, Condition)
+
+plot <- ggplot(data=distData, aes(dists, fill=Condition)) + geom_histogram(alpha=0.5, position="identity") + xlab("Latency (ms)") + ylab("Frequency") + scale_fill_brewer(palette="Set1")
+plot
+
+ksTest <- ks.test(lastLatGo$Latency, lastLat$Latency)
+
+```
+
+###Activity levels, but not accuracy or bias, vary according to the time of day
+Half hour time bins (e.g. 7:00 to 7:30, 7:30 to 8:00) were calculated to assess behavioural changes through the day. Activity levels peaked around 8:30 (one and a half hours after the lights came on) and steadily decreased throughout the remainder of the day (\autoref{fig-timeofdayactivity}). Despite a group-level peak at 8:30, marked individual differences in patterns of activity can be seen, with a number of birds showing a peak in activity during afternoon hours. The time of day during which individual birds reached their median number of trials ranged from 9:00 to 14:00 (median = 11:00; inter-quartile range = 10:45 - 12:15).
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-timeofdayactivity}Activity levels for individual birds throughout the day, in half hour bins, during the maintenance stage. Lines of best fit are loess regression lines fit to the mean proportion of trials during half hour bins for each individual bird, across all days of maintenance.", fig.width=6, fig.height=4}
+#Make half-hour time of day bins
+wakeup <- 7*3600
+bins <- 30*60
+for (i in 1:dim(subd)[1]){
+  tod <- subd$TimeOfDay[i]
+  res <- (tod - wakeup) %/% bins
+  subd$Timebin[i] <- res
+}
+subd$Timebin <- as.double(subd$Timebin)
+
+#Testing number of trials across time of day bins
+activity <- subd %>%
+  filter(Latency < 7000) %>%
+  filter(Bin20 < 100) %>%
+  filter(Bin20 > 50) %>%
+  group_by(Timebin, BirdID) %>%
+#  filter(Timebin < 15)%>%
+  count(Timebin) %>%
+  group_by(BirdID) %>%
+  mutate(Totaln = sum(n)) %>%
+  mutate(Propn = n/Totaln)
+
+#Plot total number of initiated trials for each half hour bin
+timebinBreaks <- c(0, 5, 10, 15, 20)
+timebinLabel <- c("7:00", "9:30", "12:00", "14:30", "17:00")
+actplot <- ggplot(data=activity, aes(Timebin, Propn)) + stat_smooth(aes(group=BirdID, colour=BirdID), se=FALSE, geom="line", alpha=0.4) + geom_smooth(colour="#444444") + scale_x_continuous(labels=timebinLabel, breaks=timebinBreaks) + xlab("Time of Day") + ylab("Proportion of trials") + theme(legend.position = "none")
+actplot
+```
+
+To determine if birds' motivation varied through the day, a number of metrics were calculated for each bird during the maintenance phase. \autoref{fig-timeofdaybehaviour} shows four of these metrics: response latencies, d$'$ (a measure of sensitivity/accuracy), discrimination ratio (a measure of accuracy more affected by bias than d$'$), and c (a measure of bias). To test for a relationship between time of day and the behavioural metrics, Spearman's correlations were conducted. There was no significant relationship between time of day and response latency (Go: $\rho$ = -0.018, _p_ = 0.70; No-Go: $\rho$ = -0.051, _p_ = 0.31). There was also no significant relationship between time of day and d$'$ ($\rho$ = 0.068, _p_ = 0.14) or between time of day and discrimination ratio ($\rho$ = -0.052, _p_ = 0.27). However, there was a small but significant negative correlation between time of day and bias ($\rho$ = -0.10, _p_ = 0.032), with the tendency for birds to have a No-Go bias in the morning reducing throughout the day.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-timeofdaybehaviour}Four metrics of behaviour through the day. A) Response latencies to Go and No-Go stimuli. B) Accuracy (d$'$). C) Accuracy (discrimination ratio). D) Bias (c). All lines of best fit are linear regressions with standard error shading.", fig.width=8, fig.height=8}
+
+#Create Dataframe with median latency for each bird for each half hour (only incorrect responses to No-Go)
+subset <- subd %>%
+  filter(Stimulus=="NO-GO" & Correct==0 | Stimulus=="GO" & Correct==1) %>%
+  filter(Bin20 < 150) %>%
+  filter(Bin20 > 50) %>%
+  filter(Latency < 7000) %>%
+  group_by(Timebin, BirdID, Stimulus) %>%
+  summarise(MedLatency = median(Latency))
+
+timebinBreaks <- c(0, 5, 10, 15, 20)
+timebinLabel <- c("7:00", "9:30", "12:00", "14:30", "17:00")
+#Plot median latency of incorrect No-Go responses (where 0 timebin=7AM)
+todplot <- ggplot(data=subset, aes(Timebin, MedLatency, colour=Stimulus)) + geom_smooth(method="lm") + geom_point() + ylab("Latency (ms)") + scale_x_continuous(labels=timebinLabel, breaks=timebinBreaks) + xlab("Time of Day") + theme(legend.position = "bottom") + scale_colour_brewer(palette = "Dark2")
+
+gores <- cor.test(subset$MedLatency[which(subset$Stimulus=="GO")], subset$Timebin[which(subset$Stimulus=="GO")], method="spearman")
+nogores <- cor.test(subset$MedLatency[which(subset$Stimulus=="NO-GO")], subset$Timebin[which(subset$Stimulus=="NO-GO")], method="spearman")
+
+minLatency <- 7000
+minBin <- 50
+maxBin <- 150
+Go <- subd %>%
+  filter(Latency < minLatency) %>%
+  filter(Bin20 > minBin) %>%
+  filter(Bin20 < maxBin) %>%
+  filter(Stimulus=="GO") %>%
+  group_by(Timebin, BirdID) %>%
+  summarise(TotalGo = n())
+  
+NoGo <- subd %>%
+  filter(Latency < minLatency) %>%
+  filter(Bin20> minBin) %>%
+  filter(Bin20< maxBin) %>%
+  filter(Stimulus=="NO-GO") %>%
+  group_by(Timebin, BirdID) %>%
+  summarise(TotalNoGo = n())
+
+CorrGo <- subd %>%
+  filter(Latency < minLatency) %>%
+  filter(Bin20> minBin) %>%
+  filter(Bin20< maxBin) %>%
+  filter(Stimulus=="GO") %>%
+  group_by(Timebin, BirdID) %>%
+  summarise(CorrectGo = sum(Correct))
+
+CorrNoGo <- subd %>%
+  filter(Latency < minLatency) %>%
+  filter(Bin20> minBin) %>%
+  filter(Bin20< maxBin) %>%
+  filter(Stimulus=="NO-GO") %>%
+  group_by(Timebin, BirdID) %>%
+  summarise(CorrectNoGo = sum(Correct))
+  
+GNG <- left_join(Go, NoGo, by=c('Timebin', 'BirdID'))
+Corr <- left_join(CorrGo, CorrNoGo, by=c('Timebin', 'BirdID'))
+Total <- left_join(GNG, Corr, by=c('Timebin', 'BirdID'))
+
+Total <- Total %>%
+  filter(!is.na(CorrectGo)) %>%
+  filter(!is.na(TotalGo)) %>%
+  filter(!is.na(CorrectNoGo)) %>%
+  filter(!is.na(TotalNoGo))
+
+Total$zHIT <- qnorm(Total$CorrectGo/Total$TotalGo)
+Total$zFA <- qnorm(1- Total$CorrectNoGo/Total$TotalNoGo)
+Total$zHIT[Total$zHIT==Inf & Total$zHIT > 0] <- 3.71
+Total$zHIT[Total$zHIT==-Inf & Total$zHIT < 0] <- -3.71  
+Total$zFA[Total$zFA==Inf & Total$zFA > 0] <- 3.71
+Total$zFA[Total$zFA==-Inf & Total$zFA < 0] <- -3.71
+Total$dprime <- Total$zHIT - Total$zFA
+Total$dprime <- Total$zHIT - Total$zFA
+Total$c <- -0.5 * (Total$zHIT + Total$zFA)
+Total$cprime <- Total$c / (Total$dprime + 0.1)
+Total$dr <- Total$CorrectGo/Total$TotalGo / (Total$CorrectGo/Total$TotalGo + (1 - (Total$CorrectNoGo/Total$TotalNoGo)))
+# correct responses to Go stimuli divided by the sum of the proportion correct responses to Go stimuli and the proportion incorrect responses to No-Go stimuli)
+
+# #Create dataframe with proportion correct responses for Go and No-Go across half-hour bins
+# accuracy <- subd %>%
+#   filter(Latency < 6500) %>%
+#   filter(Timebin < 21) %>%
+#   filter(Bin20 < 150) %>%
+#   filter(Bin20 > 50) %>%
+#   group_by(BirdID, Timebin, Stimulus) %>% 
+#   summarise(PropCorr = mean(Correct))
+# 
+# #Plot proportion correct responses to Go and No-Go stimuli across half-hour time bins (where 0=7AM)
+# timebinBreaks <- c(0, 5, 10, 15, 20)
+# timebinLabel <- c("7:00", "9:30", "12:00", "14:30", "17:00")
+# accplot <- ggplot(data=accuracy, aes(Timebin, PropCorr, group=Stimulus, colour=Stimulus)) + geom_point() + geom_smooth(method="lm") + scale_x_continuous(labels=timebinLabel, breaks=timebinBreaks) + xlab("Time of Day") + ylab("Proportion Correct")#if anything it appears that the birds are worse at Go in the morning and stay the same at NoGo through the day
+
+
+timebinBreaks <- c(0, 5, 10, 15, 20)
+timebinLabel <- c("7:00", "9:30", "12:00", "14:30", "17:00")
+biasNoOutlier <- Total %>%
+  filter(BirdID != "451")
+biasplot <- ggplot(data=biasNoOutlier, aes(Timebin, c)) + geom_point()  + geom_smooth(method="lm") + scale_x_continuous(labels=timebinLabel, breaks=timebinBreaks) + xlab("Time of Day") + ylab("c")
+
+
+#Total[which(Total$cprime < -2.5),]
+
+#[@Stanislaw1999]
+sensplot <- ggplot(data=biasNoOutlier, aes(Timebin, dprime)) + geom_point() + geom_smooth(method="lm") + scale_x_continuous(labels=timebinLabel, breaks=timebinBreaks) + xlab("Time of Day") + ylab("d'")
+
+
+drplot <- ggplot(data=biasNoOutlier, aes(Timebin, dr)) + geom_point() + geom_smooth(method="lm") + scale_x_continuous(labels=timebinLabel, breaks=timebinBreaks) + xlab("Time of Day") + ylab("dr")
+
+
+plot_grid(todplot, sensplot, drplot, biasplot, labels="AUTO", align="hv") #ugly
+
+############
+#Test significance
+dprimeres <- cor.test(biasNoOutlier$Timebin, biasNoOutlier$dprime, method="spearman")
+cres <- cor.test(biasNoOutlier$Timebin, biasNoOutlier$c, method="spearman")
+drres <- cor.test(biasNoOutlier$Timebin, biasNoOutlier$dr, method="spearman")
+
+
+# dprimeres <- 0
+# num <- length(unique(biasNoOutlier$Timebin)) -1
+# newalpha <- 0.05/num
+# for (i in 1:num){
+#   bin <- biasNoOutlier %>%
+#     filter(Timebin==i)
+#   res <- wilcox.test(bin$dprime, biasNoOutlier$dprime)
+#   dprimeres[i] <- res$p.value
+# }
+# dprimeres <- cor.test(biasNoOutlier$Timebin, biasNoOutlier$dprime)
+# 
+# cres <- 0
+# num <- length(unique(biasNoOutlier$Timebin)) -1
+# newalpha <- 0.05/num
+# for (i in 1:num){
+#   bin <- biasNoOutlier %>%
+#     filter(Timebin==i)
+#   res <- wilcox.test(bin$c, biasNoOutlier$c)
+#   cres[i] <- res$p.value
+# }
+# 
+# drres <- 0
+# num <- length(unique(biasNoOutlier$Timebin)) -1
+# newalpha <- 0.05/num
+# for (i in 1:num){
+#   bin <- biasNoOutlier %>%
+#     filter(Timebin==i)
+#   res <- wilcox.test(bin$dr, biasNoOutlier$dr)
+#   drres[i] <- res$p.value
+# }
+
+```
+
+###Early birds are slow learners
+To understand whether the daily reduction in No-Go bias or activity changes throughout the day might be related to learning rate, learning rates were calculated as the minimum 100-trial bin number when the birds first reached a discrimination ratio of 0.80. Therefore, larger values for learning rate indicate slower learners. Learning rates were correlated with overall bias, change in bias throughout the day, and two measures of activity timing during the maintenance stage. The maintenance stage was chosen as trials during this period would be less affected by the novelty of the sound attenuation chamber, and therefore provide a cleaner indication of the birds' natural activity in the operant experiment. Neither overall bias (\autoref{fig-todcorrelations}, Panel A; $\rho$ = 0.19. _p_ = 0.39) nor change in bias throughout the day, measured as the slope of the linear regression of time bin against bias during that time bin (\autoref{fig-todcorrelations}, Panel B; $\rho$ = -0.02, _p_ = 0.92) were significantly correlated with learning rate. 
+
+Time of day activity was operationalised in two ways: peak activity was defined as the half hour time bin during which the bird initiated the highest number of trials, and median activity was defined as the half hour time bin during which the bird reached half of its total daily trials. Peak activity was not correlated with learning rate (\autoref{fig-todcorrelations}, Panel C; $\rho$ = -0.34, _p_ = 0.12), but median activity was moderately significantly negatively correlated with learning rate (\autoref{fig-todcorrelations}, Panel D; $\rho$ = -0.45, _p_ = 0.034). This indicates that the birds that were slower learners initiated a greater proportion of their trials during the morning than faster learners.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-todcorrelations}Relationship between learning rate, where larger values indicate slower learners, and possible predictors. A) Bias. B) Change in bias through the day. C) Peak activity half-hour time bin. D) Median activity half-hour time bin. Lines of best fit are all linear models with standard error shading.", fig.width=8, fig.height=8}
+#Bias through tod
+todbias <- 0
+birds <- unique(Total$BirdID)
+for (i in 1:length(birds)){
+  sub <- Total[which(Total$BirdID==birds[i]),]
+  model <- lm(sub$c ~ sub$Timebin)
+  slope <- model$coefficients[2]
+  todbias[i] <- slope
+}
+todbias <- as.numeric(todbias)
+birds <- as.character(birds)
+todbiasdf <- as.data.frame(cbind(todbias, birds))
+names(todbiasdf) <- c("biasSlope", "BirdID")
+todbiasdf$biasSlope <- as.double(as.character(todbiasdf$biasSlope))
+
+Go <- subd %>%
+  filter(Stimulus=="GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(TotalGo = n())
+  
+NoGo <- subd %>%
+  filter(Stimulus=="NO-GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(TotalNoGo = n())
+
+CorrGo <- subd %>%
+  filter(Stimulus=="GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(CorrectGo = sum(Correct))
+
+CorrNoGo <- subd %>%
+  filter(Stimulus=="NO-GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(CorrectNoGo = sum(Correct))
+  
+GNG <- left_join(Go, NoGo, by=c('Bin', 'BirdID'))
+Corr <- left_join(CorrGo, CorrNoGo, by=c('Bin', 'BirdID'))
+Total <- left_join(GNG, Corr, by=c('Bin', 'BirdID'))
+
+Total <- Total %>%
+  filter(!is.na(CorrectGo)) %>%
+  filter(!is.na(TotalGo)) %>%
+  filter(!is.na(CorrectNoGo)) %>%
+  filter(!is.na(TotalNoGo))
+
+Total$PropCorrGo <- Total$CorrectGo/Total$TotalGo
+Total$PropCorrNoGo <- Total$CorrectNoGo/Total$TotalNoGo
+Total$zHIT <- qnorm(Total$PropCorrGo)
+Total$zFA <- qnorm(1- Total$PropCorrNoGo)
+Total$zHIT[Total$zHIT==Inf & Total$zHIT > 0] <- 3.09
+Total$zHIT[Total$zHIT==-Inf & Total$zHIT < 0] <- -3.09  
+Total$zFA[Total$zFA==Inf & Total$zFA > 0] <- 3.09
+Total$zFA[Total$zFA==-Inf & Total$zFA < 0] <- -3.09
+Total$dprime <- Total$zHIT - Total$zFA
+Total$dprime <- Total$zHIT - Total$zFA
+Total$c <- -0.5 * (Total$zHIT + Total$zFA)
+Total$cprime <- Total$c / (Total$dprime + 0.1)
+Total$dr <- Total$CorrectGo/Total$TotalGo / (Total$CorrectGo/Total$TotalGo + (1 - (Total$CorrectNoGo/Total$TotalNoGo)))
+
+#calculate minBin
+learningrate <- Total %>%
+  group_by(BirdID) %>%
+  mutate(isFinish = dr > 0.8 & !duplicated(dr > 0.8)) %>%
+  filter(isFinish == TRUE) %>%
+  select(BirdID, Bin) %>%
+  mutate(minBin = Bin) %>%
+  select(BirdID, minBin) %>%
+  filter(BirdID != "067") %>%
+  filter(BirdID != "451")
+
+#calc midday for Bin20 50-100
+midday <- activity %>%
+  group_by(BirdID) %>%
+  mutate(cumn =cumsum(n)) %>%
+  mutate(propcumn = cumn/Totaln) %>%
+  filter(propcumn > 0.50) %>%
+  top_n(-1, propcumn) %>%
+  select(Timebin, BirdID, Totaln, cumn, Totaln, propcumn) #timebin is timebin when bird hits half of its trials
+
+#calc peak for Bin20 50-100
+peak <- activity %>%
+  group_by(BirdID) %>%
+  mutate(peak = max(n))
+peak$thisone <- 0
+for (i in 1:length(peak$peak)){
+  if (peak$peak[i] == peak$n[i]){
+    peak$thisone[i] <- 1
+  }
+  else{peak$thisone[i] <- 0}
+}
+peak <- peak %>%
+  filter(thisone == 1) %>%
+  select(Timebin, BirdID, Propn) #timebin is timebin when bird is most active
+
+#calc bias for Bin20 50-100
+bias <- Total %>%
+  filter(Bin > 10) %>%
+  filter(Bin < 21) %>%
+  group_by(BirdID) %>%
+  summarise(avgbias = mean(c))
+
+#calc slope of bias through day?????
+
+midlr <- left_join(midday, learningrate)
+peaklr <- left_join(peak, learningrate)
+biaslr <- left_join(bias, learningrate)
+biasslopelr <- left_join(todbiasdf, learningrate)
+
+midlrtest <- cor.test(midlr$minBin, midlr$Timebin, method="spearman") #sig neg relationship. 
+peaklrtest <- cor.test(peaklr$minBin, peaklr$Timebin, method="spearman") #no sig relationship 
+biaslrtest <- cor.test(biaslr$minBin, biaslr$avgbias, method="spearman") #no sig
+biasslopelrtest <- cor.test(biasslopelr$minBin, biasslopelr$biasSlope, method="spearman")
+
+timebinBreaks <- c(0, 5, 10, 15)
+timebinLabel <- c("7:00", "9:30", "12:00", "14:30")
+
+midlrplot <- ggplot(midlr, aes(minBin, Timebin)) + geom_point() + geom_smooth(method="lm") + xlab("Learning rate") + ylab("Median daily activity") + scale_y_continuous(labels=timebinLabel, breaks=timebinBreaks) 
+peaklrplot <- ggplot(peaklr, aes(minBin, Timebin)) + geom_point() + geom_smooth(method="lm") + xlab("Learning rate") + ylab("Peak daily activity") + scale_y_continuous(labels=timebinLabel, breaks=timebinBreaks)
+biaslrplot <- ggplot(biaslr, aes(minBin, avgbias)) + geom_point() + geom_smooth(method="lm") + xlab("Learning rate") + ylab("Bias (c)")
+biasslopelrplot <- ggplot(biasslopelr, aes(minBin, biasSlope)) + geom_point() + geom_smooth(method="lm") + xlab("Learning rate") + ylab("Change in bias (c)")
+
+plot_grid(biaslrplot, biasslopelrplot, peaklrplot, midlrplot, labels="AUTO")
+
+```
+
+
+###Response accuracy during maintenance is affected by time of day and recent preceding behaviour
+```{r, echo=FALSE, results="hide", eval=FALSE}
+library(lme4)
+library(splines)
+
+Total <- subd %>%
+  group_by(BirdID) %>%
+  mutate(prevacc = lag(Correct)) %>%
+  mutate(prevtype = lag(Stimulus)) %>%
+  mutate(timedelay = TimeInMillis - lag(TimeInMillis)) %>%
+  mutate(scaleTimeOfDay = TimeOfDay / 100000) %>%
+  mutate(scaleLatency = Latency / 1000) %>%
+  mutate(scaleIndex = Index / 1000) %>%
+  filter(timedelay > 0) %>%
+  filter(!is.na(prevacc)) %>%
+  filter(Latency > 0)
+
+Total$Correct <- as.factor(Total$Correct)
+Total$prevacc <- as.factor(Total$prevacc)
+
+
+mNull <- glmer(Correct ~ (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m1.1 <- glmer(Correct ~ Stimulus + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m1.2 <- glmer(Correct ~ log(timedelay) + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m1.3 <- glmer(Correct ~ prevacc + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m1.32 <- glmer(Correct ~ prevacc + prevacc:scaleLatency + (1|BirdID) + scaleIndex, data=Total, family=binomial) #no
+m1.4 <- glmer(Correct ~ prevtype + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m1.5 <- glmer(Correct ~ scaleLatency + (1|BirdID) + scaleIndex, data=Total, family=binomial) #no
+m2 <- glmer(Correct ~ Stimulus + log(timedelay) + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m3 <- glmer(Correct ~ Stimulus + log(timedelay) + prevacc + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m4 <- glmer(Correct ~ Stimulus + log(timedelay) + prevacc + prevtype + (1|BirdID) + scaleIndex, data=Total, family=binomial) #not significant effect of prevtype
+m5 <- glmer(Correct ~ Stimulus + log(timedelay) + prevacc + prevtype + Stimulus:prevtype + (1|BirdID) + scaleIndex, data=Total, family=binomial) #also not significant but nearly
+m6 <- glmer(Correct ~ Stimulus + log(timedelay) + prevacc + prevacc:log(timedelay) + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m7 <- glmer(Correct ~ Stimulus + log(timedelay) + prevacc + prevacc:log(timedelay) + prevacc:Stimulus + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m8 <- glmer(Correct ~ Stimulus + log(timedelay) + prevacc + prevacc:log(timedelay) + prevacc:Stimulus + Stimulus:log(timedelay) + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m9 <- glmer(Correct ~ Stimulus*log(timedelay)*prevacc + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+
+
+m10_1 <- glmer(Correct ~ Stimulus*log(timedelay)*prevacc + ns(scaleTimeOfDay,1) + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m10_2 <- glmer(Correct ~ Stimulus*log(timedelay)*prevacc + ns(scaleTimeOfDay,2) + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m10_3 <- glmer(Correct ~ Stimulus*log(timedelay)*prevacc + ns(scaleTimeOfDay,3) + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m10_4 <- glmer(Correct ~ Stimulus*log(timedelay)*prevacc + ns(scaleTimeOfDay,4) + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m10_5 <- glmer(Correct ~ Stimulus*log(timedelay)*prevacc + ns(scaleTimeOfDay,5) + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+
+m11 <- glmer(Correct ~ Stimulus*log(timedelay)*prevacc + ns(scaleTimeOfDay, 2) + ns(scaleTimeOfDay,2):Stimulus + (1|BirdID) + scaleIndex, data=Total, family=binomial)
+m12 <- glmer(Correct ~ Stimulus*log(timedelay)*prevacc + ns(scaleTimeOfDay, 2) + ns(scaleTimeOfDay,2):Stimulus + ns(scaleTimeOfDay,2):prevacc + (1|BirdID) + scaleIndex, data=Total, family=binomial) #prevacc makes a difference during spline 1 but not during spline 2 
+m13 <- glmer(Correct ~ Stimulus*log(timedelay)*prevacc + ns(scaleTimeOfDay, 2) + ns(scaleTimeOfDay,2):Stimulus + ns(scaleTimeOfDay,2):prevacc + ns(scaleTimeOfDay,2):log(timedelay) + (1|BirdID) + scaleIndex, data=Total, family=binomial) #not sig
+
+anova(mNull, m1.1)
+anova(mNull, m1.2)
+anova(mNull, m1.3)
+anova(mNull, m1.4)
+anova(m1, m2)
+anova(m2, m3)
+anova(m3, m4)
+anova(m4, m5)
+anova(m3, m6)
+anova(m6, m7)
+anova(m7, m8)
+anova(m8, m9)
+
+anova(m9, m10_0)
+anova(m9, m10_1) 
+anova(m9, m10_2)
+anova(m9, m10_3)
+anova(m9, m10_4)
+anova(m9, m10_5)
+
+anova(m10, m11)
+anova(m11, m12)
+anova(m12, m13)
+```
+One of the findings described in Chapter 4 was that the Leiden birds were more accurate during maintenance than London birds. One potential explanation for this effect might be that the Leiden birds interacted with the operant conditioning software throughout the photoperiod, whereas London birds interacted with the operant conditioning software while an experimenter was on site. In Section 5.3.4 I demonstrated that activity levels vary by individual throughout the photoperiod, though I found no linear effect of this on accuracy as calculated using d$'$. However, modelling trial-by-trial accuracy, rather than d$'$ across bins, may provide deeper insights into factors affecting a bird's performance. A series of binomial generalised linear mixed models was run to determine if response accuracy is affected by the inter-trial interval (ITI) from the preceding trial (ITI: log-transformed milliseconds), stimulus type (Stimulus: Go/No-Go), accuracy on the preceding trial (PreAcc: correct/incorrect), stimulus type of the preceding trial (PreType: Go/No-Go), response latency (Latency: milliseconds) and the time of day (TimeOfDay: log-transformed milliseconds from the start of the photoperiod) (R package: lme4).
+
+An initial null model with bird ID as a random effect and the index number (by bird; divided by 1000 for scaling purposes) was built. Bird ID controls for within-bird effects, and inclusion of the index number controls for learning effects that may occur even during maintenance trials. Models were incrementally built by adding one factor or interaction and testing the model's relative goodness-of-fit using Aikake information criterion (AIC) based comparisons. A table of nested models and comparisons documents this process (\autoref{tab-complexGlmm}). Models 6 and above did not converge, but as $\beta$ estimates did not change, this was deemed to not require further exploration.
+
+\begin{table}
+\caption{GLMMs for modelling accuracy of response during maintenance trials.}
+\label{tab-complexGlmm}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llrlllrr@{}}
+\toprule
+Model & Factors                            & df & AIC   & Log-likelihood & Comparator & $\chi^2$ test & P ($>\chi^2$)      \\ \midrule
+NULL  & (1 | BirdID) + Index                 & 3  & 68103 & -34048         &            &               &                    \\
+1.1   & NULL + Stimulus                    & 4  & 67845 & -33918         & NULL       & 259.6         & \textless{}2.2e-16 \\
+1.2   & NULL + TimeLag                     & 4  & 67918 & -33955         & NULL       & 186.5         & \textless{}2.2e-16 \\
+1.3   & NULL + PreAcc                     & 4  & 67759 & -33876         & NULL       & 345.4         & \textless{}2.2e-16 \\
+1.4   & NULL + PreType                    & 4  & 68103 & -34048         & NULL       & 1.1          & 0.301              \\
+1.5   & NULL + Latency                     & 4  & 68104 & -34048         & NULL       & 0.4          & 0.538              \\
+2     & Model 1.1 + ITI                & 5  & 67655 & -33823         & Model 1.1  & 191.6         & \textless{}2.2e-16 \\
+3     & Model 2 + PreAcc                  & 6  & 67331 & -33660         & Model 2    & 325.8         & \textless{}2.2e-16 \\
+4     & Model 3 + PreType                 & 7  & 67331 & -33659         & Model 3    & 2.0          & 0.156              \\
+5     & Model 4 + Stimulus:PreType        & 8  & 67330 & -33657         & Model 4    & 3.2          & 0.076              \\
+6     & Model 3 + PreAcc:ITI          & 7  & 67316 & -33651         & Model 3    & 17.0            & 3.7e-05           \\
+7     & Model 6 + PreAcc:Stimulus         & 8  & 67290 & -33637         & Model 6    & 28.2          & 1.1e-07           \\
+8     & Model 7 + Stimulus:ITI         & 9  & 67129 & -33556         & Model 7    & 163.2         & \textless{}2.2e-16 \\
+9     & Model 8 + PreAcc:ITI:Stimulus & 10 & 67105 & -33542         & Model 8    & 26.5          & 2.6e-07           \\
+10    & Model 9 + TimeOfDay                & 12 & 67091 & -33533         & Model 9    & 17.9          & 0.00012            \\
+11    & Model 10 + TimeOfDay:Stimulus      & 14 & 66984 & -33478         & Model 10   & 110.4         & \textless{}2.2e-16 \\
+12    & Model 11 + TimeOfDay:PreAcc       & 16 & 66980 & -33474         & Model 11   & 8.67          & 0.013              \\
+13    & Model 12 + TimeOfDay:ITI       & 18 & 66978 & -33471         & Model 12   & 5.2          & 0.073              \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+Time of day was modelled using splines (R package: splines) because a simple linear model of time of day would not capture the variations in activity seen in \autoref{fig-timeofdayactivity}. A series of linear models was designed to test how many splines best fit the data. Incrementally increasing numbers of splines describing time of day were added to a model containing a full interaction between preceding trial accuracy, ITI, and stimulus. The AIC was calculated for each of these models and the number of splines at the "elbow" of the plot was selected as the best fitting model with the fewest necessary degrees of freedom; the model with two splines was used in the remainder of the GLMMs (i.e. Models 10-13) (\autoref{fig-splines}).
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-splines}Line/elbow graph of AICs by number of splines describing time of day in the nested generalised linear mixed models."}
+aic_splines <- data.frame(splines = c(0,1,2,3,4,5),
+                          AIC = c(67106, 67106, 67091, 67091, 67088, 67091))
+splineplot <- ggplot(aic_splines, aes(splines, AIC)) + geom_line()
+splineplot
+```
+
+The best fitting model, Model 12, was selected to include main effects of stimulus type (responses to Go stimuli are more accurate than responses to No-Go stimuli: $\beta$ = -0.31, _p_ < 2e-16; Model 1.1), ITI (responses are more accurate with a shorter ITI: $\beta$ = -0.10, _p_ < 23-16; Model 1.2) and accuracy on the preceding trial (responses were more accurate if the preceding response was accurate: $\beta$ = 0.42, _p_ < 2e-16; Model 1.3). There was no main effect of preceding stimulus type ($\beta$ = -0.02, _p_ = 0.30; Model 1.4) or latency ($\beta$ < 1.7e-7, _p_ = 0.99; Model 1.5). Models 1.4, 4 and 5 all tested the effect of preceding stimulus type, but inclusion of preceding trial type did not significantly improve the model fit in any of these cases (see \autoref{tab-complexGlmm}). Specifically, there is no evidence for an interaction between present stimulus type and preceding stimulus type, indicating that, for example, birds did not receive an accuracy boost from being presented with the same stimulus type as they previously received.
+
+Tests of nested models demonstrated that there were a number of significant interactions between variables predicting response accuracy. In Model 6, a significant interaction between preceding accuracy and ITI ($\beta$ = -0.065, _p_ = 3.9e-5) indicates that if a bird was accurate on the preceding trial, increasing ITIs decrease the likelihood of an accurate response on the present trial. In Model 7, a significant interaction between stimulus type and previous accuracy ($\beta$ = -0.23, _p_ = 1.1e-7) indicates that if the bird was accurate on the preceding trial, presentation of a No-Go stimulus type decreases the probability of an accurate response relative to the presentation of a Go stimulus type. In Model 8, a significant interaction between stimulus type and ITI ($\beta$ = 0.18, _p_ < 2e-16) indicates that, for Go stimuli, a longer ITI decreases the probability of a correct response, but ITI does not appear to have an effect on the accuracy to No-Go stimuli. Model 9 demonstrates a significant three-way interaction between stimulus type, ITI, and preceding trial accuracy ($\beta$ = 0.16, _p_ = 2.5e-7). One example of how this manifests is the combination of a No-Go stimulus with a long ITI between the previously accurate trial results in a higher probability of an accurate response to the present trial (\autoref{fig-threeway}).
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=6, fig.width=6, fig.cap="\\label{fig-threeway}Visualisation of the three-way interaction between stimulus type, preceding trial accuracy, and lag. For this figure, lags have been grouped into long or short based on the median lag duration; lags were modelled as continuous data in the GLMMs."}
+
+Total <- subd %>%
+  group_by(BirdID) %>%
+  mutate(prevacc = lag(Correct)) %>%
+  mutate(prevtype = lag(Stimulus)) %>%
+  mutate(timedelay = TimeInMillis - lag(TimeInMillis)) %>%
+  mutate(scaleTimeOfDay = TimeOfDay / 100000) %>%
+  mutate(scaleLatency = Latency / 1000) %>%
+  mutate(scaleIndex = Index / 1000) %>%
+  filter(timedelay > 0) %>%
+  filter(!is.na(prevacc)) %>%
+  filter(Latency > 0)
+
+Total$Correct <- as.factor(Total$Correct)
+Total$prevacc <- as.factor(Total$prevacc)
+
+
+forplot <- Total %>%
+  mutate(timedelay2 = ifelse(log(timedelay) < 10.02893, "Short Lag", "Long Lag")) %>% #10 is median of log(timedelay)
+  mutate(prevacc2 = ifelse(prevacc == 1, "Preceding Correct", "Preceding Incorrect")) %>%
+  mutate(Correct2 = ifelse(Correct == 1, "Correct", "Incorrect"))
+ 
+plot <- ggplot(forplot, aes(Correct2, fill=Stimulus)) + geom_bar(position="dodge") + facet_wrap(timedelay2~prevacc2) + xlab("")
+plot
+```
+
+The two-spline time of day variable was added to Model 9, which contains the three-way interaction. Within Model 10, both splines had significant $\beta$ estimates (spline 1: $\beta$ = 0.014, _p_ = 0.13; spline 2: $\beta$ = -0.31, _p_ = 0.001). This indicates that the first spline of time of day has a positive relationship with accuracy whereas the second spline has a negative relationship. Once stimulus type, ITI, preceding accuracy, bird ID and index throughout the trial have all been controlled, a bird is more likely to respond accurately in the first part of the day than the second part of the day. This, therefore, is a refinement of the results described in Section 5.3.4.
+
+In Model 11, a significant interaction between time of day and stimulus is found for spline 1 ($\beta$ = -1.15, _p_ < 2e-16) but not for spline 2 ($\beta$ = -0.21, _p_ = 0.27). This indicates that for the early part of the day birds are less likely to respond accurately to a Go stimulus than in the late part of the day, but that this is not true for responses to No-Go stimuli (\autoref{fig-earlylate}). In Model 12, an interaction between time of day and preceding trial accuracy was found for spline 1 ($\beta$ = 0.35, _p_ = 0.004) but not for spline 2 ($\beta$ = 0.16, _p_ = 0.46). That is, there is a slight trend for birds to respond accurately if the preceding response was accurate in the later part of the day (\autoref{fig-earlylate}). The addition of an interaction between time of day and ITI did not significantly improve the model (Model 13, \autoref{tab-complexGlmm}) and therefore no attempts were made to fit additional interaction terms between time of day and other predictor variables.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=6, fig.width=6, fig.cap="\\label{fig-earlylate}Bar chart of correct responses during early and late parts of the day to A) Go and No-Go stimuli and B) stimuli to which the preceding responses were either accurate or inaccurate. The times of day have been divided by a median split for this visualisation, but the GLMMs model time of day using two automated splines, which are unlikely to be knotted at the median time of day."}
+forplottime <- Total %>%
+  mutate(timeofday2 = ifelse(scaleTimeOfDay > 0.3912228, "Late", "Early")) %>%
+  mutate(Correct2 = ifelse(Correct == 1, "Correct", "Incorrect")) %>%
+  mutate(prevacc2 = ifelse(prevacc == 1, "Preceding Correct", "Preceding Incorrect")) 
+plot <- ggplot(forplottime, aes(Correct2, fill=Stimulus)) + geom_bar(position="dodge") + facet_wrap(~timeofday2) + xlab("") + theme(legend.title = element_blank())
+
+
+plot2 <- ggplot(forplottime, aes(Correct2, fill=prevacc2)) + geom_bar(position="dodge") + facet_wrap(~timeofday2) + xlab("") + scale_fill_brewer(palette="Dark2") + theme(legend.title = element_blank())
+  
+plot_grid(plot, plot2, nrow=2, align='v', labels="AUTO")
+
+```
+
+
+##Discussion
+
+I found that Go and No-Go stimuli are learned at different rates, with 80% accuracy in response to Go stimuli being achieved much earlier in training than 80% accuracy to No-Go stimuli. These varying learning rates are reflected in the birds' response bias during early learning: birds have a Go response bias during early training, which is not reliably found after birds reach criterion. I also found that response latencies to Go stimuli subtly shorten after learning, whereas response latencies to No-Go stimuli are qualitatively different during learning and maintenance. Birds were most active in the morning, with activity levels declining throughout the day, but there were dramatic individual differences in the timing of trial initiations. I found that the time of day negatively correlated with bias, suggesting that the group-level No-Go bias in the morning diminished through the day. I also found a correlation between learning rate and individual differences in the time of day the birds are preferentially active; slower learning birds tended to be more active early in the day than fast learning birds. 
+
+To integrate many of these findings I ran a series of nested GLMMs on response accuracy and found a series of main effects: responses to Go stimuli are more accurate than responses to No-Go stimuli, shorter ITIs from the preceding trial increase the likelihood of a correct response, and responses are more accurate if the preceding trial response was accurate. I also found no main effect of preceding trial type or latency on the present trial. Additionally, a series of complex interaction effects culminated with a three-way interaction between stimulus type, ITI and preceding trial accuracy. That is, predictions of response accuracy are best made by modelling not only the two-way interactions between stimulus type and ITI, stimulus type and preceding accuracy, and ITI and preceding accuracy, but also the three-way interaction between the three predictor variables. Further, the time of day significantly affected response accuracy, with response accuracy higher during the first part of the day than during the second part of the day. Finally, interactions between time of day and stimulus type as well as time of day and preceding accuracy improved the model fit.
+
+###Go/No-Go response learning rates and bias
+
+The finding of a differential rate of learning of the correct responses to Go and No-Go stimuli was expected for multiple confounded reasons. First, human Go/No-Go literature suggests that withholding the Go response is more effortful than producing the Go response [@Gao2017]. Second, one stage in our training procedure requires all birds to learn to Go in response to a conspecific song and to No-Go in response to a tone. Therefore, when the stimuli were swapped to two conspecific songs, birds may have initially responded to a large proportion of both Go and No-Go stimuli because they were generalising from the training conspecific song to all conspecific songs. Third, the birds' initial bias to Go could reflect a change in the decision criterion based on a risk/reward analysis, whereby the birds know that they must Go to receive a food reward, and are willing to risk the darkness punishment to receive that reward.
+
+It is therefore critical to recognise that the response data, even assessed using bias metrics, do not necessarily reflect the active learning of the two stimuli, as is often assumed. For example, a group-level Go bias during learning does not necessarily mean that the birds learned the Go stimulus faster than the No-Go stimulus. Indeed, Bengalese finches preferentially learn a No-Go stimulus [@Morisaka2009], and this could be the case for our zebra finches as well. If the decision criterion is initially, and on the basis of factors not related to stimulus discrimination, set very far towards the Go stimulus, this bias would only be reduced when the birds learned to both recognise the No-Go stimulus and to associate the No-Go stimulus with the No-Go response. Unfortunately, with no probe stimuli in this experiment, I cannot distinguish between these possibilities. However, our behavioural response data, along with others [@Gess2011], do suggest that the learning of Go and No-Go stimuli is not performed at the same rate. I further recommend that future studies that use Go/No-Go operant conditioning as a method to test the generalisation abilities of subjects do so only after confirming that birds have learned both the Go and the No-Go stimuli to an equal criterion, and that they do not have an overall Go or No-Go bias. This might take a few hundred trials longer than previous criterion targets, but would aid in the analysis of probe stimuli.
+
+###Response latencies
+Further evidence for the dissociation of Go and No-Go learning is found in our response latency results. I show that, for both learning and maintenance stages, (correct) response latencies to Go stimuli follow a logarithmic distribution as is frequently the case with reaction time data [@Baayen2010; but see @Whelan2008]. In contrast, (incorrect) response latencies to No-Go stimuli are not easily modelled with any frequently used transformation. This is especially the case for response latencies during the maintenance stage, where longer response latencies become increasingly frequent. It is our view that response latencies after ~3000 ms do not reflect a false alarm in the traditional sense of signal detection theory. Instead, these long latencies represent some other psychological process, such as the inability of the zebra finch to withhold a pecking response, as is suggested by the effortfulness literature [e.g. @Gao2017] or the impatience of the zebra finch to initiate another trial, as is suggested by theoretical work on the asymmetry of the Go/No-Go task [@Shenoy2012a].
+
+Further work could dissociate these possibilities. Our software intentionally did not record any key pecks to the left (initiator) sensor after the stimulus was triggered, but an alteration to record all key pecks would permit the analysis of the timing of all key pecks. For example, if long-latency incorrect pecks to the right (response) sensor could be predicted by un-reinforced pecks to the left (initiator) sensor through cross-correlation, that would suggest that the birds produce a range of pecking behaviours to attempt to more quickly initiate another trial. Further work on characterising the No-Go response latencies could aid in our understanding of the cognitive process underlying these responses; longer windows for responding would specifically help with the modelling of the long latencies. Regardless of the cause of the No-Go response latency bimodal distribution, I recommend that future studies involving zebra finch Go/No-Go operant conditioning use a cutoff time of 3000 ms in order to reduce the number of "false alarm" false alarms. 
+
+###Time of day
+I analysed the patterns of trial initiation throughout the day to inform the improvement of our protocol for animal welfare purposes. During maintenance, I found great individual differences in trial initiation activity, with some birds initiating large numbers of trials in the afternoon. The vast differences between when individuals triggered their middle daily trial (i.e. from 9am to 2pm) illustrate this. I also found that response latencies, sensitivity (d$'$) and discrimination ratio did not vary according to the time of day, but bias did. The birds, on average, began the day with a No-Go bias. This is difficult to explain, given that hunger motivation would lead to a Go bias. I believe that my specific protocol, which allowed for birds to feed freely during the first 10 minutes of the daily photoperiod, may have alleviated hunger motivation in the morning. If satiated, the female zebra finches may have engaged with the operant conditioning apparatus to receive the male song stimulus [e.g. @Holveck2007], although this is unlikely as this bias is not seen during the afternoon. Further work on the fine temporal structure of peck initiation and clustering of trials may help with understanding this daily shift in bias.
+
+I also found evidence that learning rate is related to the pattern of trial initiation, even when the bird has finished learning. Specifically, slower learning birds initiate trials earlier in the day during maintenance. @Bell2015 found that fast learners exhibited larger neural responses to stimuli after learning, and I wanted to characterise our own birds' learning rates for gene expression analyses. I hypothesised that the learning rate effect on neural activity in response to song playback might be mediated by a time of day effect. That is, birds who prefer to be active in the morning (when our apparatus was always available to the birds) might learn faster [as in @Ammons1995], and would also exhibit greater gene expression in response to morning playbacks. However, our data does not support this hypothesis, as I found a negative correlation between learning rate and time of day activity. I theorise that birds that are preferentially active in the morning are slower learners because they have a longer gap between the bulk of their trials and the next morning, although I did not find a relationship between trial initiation time and a change in bias through the day. Future experiments using this protocol should be sensitive to these diurnal patterns and experimenters may wish to extend the testing period for particularly morning-active individuals in order to decrease the total number of days spent in the chamber.
+
+###Complex interactions predict response accuracy during maintenance
+Having examined the relationship between learning rate and time of day activity, I sought to understand whether time of day has an effect on response accuracy during operant conditioning maintenance. In order to do so, I modelled response accuracy as a binomial variable using a series of nested generalised linear mixed models. The significant main effect of stimulus type, whereby responses to Go stimuli are overall more accurate than responses to No-Go stimuli, simply indicates that birds produce the Go behaviour in response to the Go stimuli more than they produce the No-Go behaviour in response to the No-Go stimuli; this can also be interpreted as an overall slight bias towards the Go response to both stimulus types, which could be explained by either the birds preferentially learning the Go behaviour [in contrast to the Bengalese finches in @Morisaka2009] or by the birds struggling to inhibit the No-Go behaviour [as in @Gao2017]. This finding contrasts with the analysis shown in \autoref{fig-biaslearningplot}, where by the end of learning, the Go bias that was present during learning attenuated; this may be because the modelling of response accuracy here is conducted after controlling for bird ID and for any possible effects of ongoing learning, even during maintenance. Additionally, as trials were not binned to calculate bias scores, the GLMM analysis has higher sensitivity than the analysis of binned bias scores using Bonferroni correction.
+
+Previous literature has investigated the duration of inter-trial intervals in both classical and operant conditioning, with some describing a benefit of massing trials and others describing a benefit of spacing trials [@Gibbon1977b; @Roberts1972; @Spence1950]. Here there was a significant main effect of ITI, where longer ITIs were associated with a less accurate response. This broadly supports the notion that massed trials improve response accuracy relative to spaced trials. However, it must be noted that inter-trial interval durations have not been experimentally controlled here as they have in previous literature; instead, inter-trial interval durations were determined by the initiation of trials by the birds. The motivation of birds to initiate a trial, which cannot be explicitly measured and which may therefore effect a bird's likelihood to produce a Go behaviour, may be non-independent of inter-trial interval durations.
+
+A main effect of previous response accuracy was also found; the $\beta$ for this effect had the greatest absolute value of all main effects, indicating that it has the greatest effect on response accuracy. This would be expected during learning, where response accuracy increases and response accuracy for each trial could be expected to be predicted, in part, by response accuracy for the preceding trial(s). However, during maintenance, this suggests that response accuracy remains autocorrelated; that is, birds could be said to get stuck in "good periods" and "bad periods" throughout maintenance. Further work to assess the duration of these periods of relative accuracy and inaccuracy may aid in the understanding of avian operant response behaviours.
+
+Perhaps as interesting as the significant main effects are the predictor variables for which there was no main effect. First, response latency did not improve the model describing response accuracy. Although response latency was shown to be related to stimulus type (\autoref{fig-responselatencyHistograms}) and to response accuracy, in the GLMM containing bird ID and the by-bird index control variables, response latency did not significantly affect response accuracy. Second, preceding trial stimulus type did not affect response accuracy. A lack of effect of preceding stimulus type indicates that the birds did not gain an advantage, during maintenance, from the preceding trial being either Go or No-Go. Additionally, preceding stimulus type did not interact with present stimulus. This indicates that, for instance, birds gained no advantage on a Go trial if the preceding trial was a Go trial. Preceding stimulus type was expected to interact with present stimulus to influence response accuracy, as the birds might be expected to hold the preceding stimulus type, their response and the outcome in short-term memory, and use that to improve the likelihood of correct response on the next trial. Given that being accurate on the preceding trial significantly improves the likelihood of accuracy on the present trial, this was a surprise. Though not explicitly tested, it could indicate that, for example, the zebra finches are able to use the outcome from their response to a preceding Go stimulus to determine their response to either a Go or a No-Go stimulus, which would require complex working memory. This would be particularly surprising as zebra finches struggle to recall information from two categories of information in combination [@Sanford2008]
+
+The series of interactions between stimulus type, ITI and preceding trial accuracy all demonstrate the richness and complexity of the birds' decision making during maintenance of this operantly learned discrimination. Most intriguing is the interaction between stimulus type and ITI, whereby longer ITIs decrease the likelihood of a correct response for Go stimuli but not for No-Go stimuli; that is, after a long ITI, a bird is generally more likely to make a No-Go response to both Go and No-Go stimuli. This could be explained by either motivational or bias factors. From a motivational perspective, the birds might be initiating a trial after a long ITI for purposes of environmental enrichment [as in @Holveck2014]; the depressed Go response might be due to the bird not requiring the food reinforcement. This interaction could also be explained by a bias perspective; a bird's decision criterion may be set with a No-Go bias in order to decrease the potential for receiving a lights-out punishment. This bias may be stronger when the birds have not recently received reinforcement or punishment with which to update their decision criterion, as in the case with longer ITIs.
+
+As previously discussed, preferential time of day activity has a negative relationship with learning rate, with birds active earlier in the day learning the discrimination slower than birds active later in the day. In the GLMMs, time of day has a main effect on response accuracy during maintenance, with birds more likely to respond accurately during the first part of the day than the second part of the day. The contrast between this finding and that in Panel B of \autoref{fig-timeofdaybehaviour} (where time of day did not have a significant effect on accuracy) can be explained by three differences in the analyses: 1) time of day was modelled using a linear model (effectively one spline) in the analysis shown in \autoref{fig-timeofdaybehaviour} whereas it was modelled using a two-spline model in the analysis described in \autoref{tab-complexGlmm}; 2) in \autoref{fig-timeofdaybehaviour}, the response variable was d$'$, a summary statistic created by binning multiple trials together whereas the response variable in the GLMM-based analysis was raw accuracy on a trial-by-trial basis; 3) time of day in the first simple linear model analysis was modelled without controlling for any other variables, whereas time of day in the GLMM analysis was modelled after controlling for bird ID and the three-way interaction between preceding response accuracy, ITI and preceding accuracy.
+
+In addition to the main effect, time of day also interacted with stimulus type. Specifically, during the early part of the day, birds are less likely to respond accurately to Go stimuli but this is not true for No-Go stimuli. This finding can be rephrased as birds are more likely to have a No-Go bias during the morning than during the afternoon, which causes reduced accuracy to Go stimuli but not to No-Go stimuli. This reflects the slight negative slope of the linear regression line in Panel D of \autoref{fig-timeofdaybehaviour}. This finding supports my hypothesis that the depressed asymptotic response accuracy demonstrated in Chapter 4 may be due to the difference in experimental design, whereby London birds were given _ad libitum_ access to food when the experimenter was not on site whereas Leiden birds interacted with the operant conditioning apparatus through the entire photoperiod.
+
+Finally, time of day interacted with whether the bird was accurate on the preceding trial, reflecting a slight effect for birds to be more likely to respond accurately during the later part of the day if they were accurate on the preceding trial. This may indicate that birds are more likely to refer to the preceding trial during the later part of the day than the earlier part of the day. The reason for this remains unexplored, but could be related to complex non-monotonic decreases in working memory function throughout the circadian rhythm [as reviewed in @Smarr2014].
+
+
+###Conclusion
+Here I found differential learning of the Go and No-Go stimuli, which I suggest supports the notion that Go and No-Go stimuli are learned separately. This differential learning could be caused by a range of factors, and advocate conservative metrics for establishing a learning criterion. Additionally, I posit that the No-Go responses likely reflect two separate cognitive processes and recommend that in future, researchers limit the response window to 3000 ms after stimulus presentation. I also found great individual differences in trial initiation timing patterns and that slower learning birds preferentially initiate trials in the morning compared to faster learning birds. I further demonstrated that inter-trial interval duration, preceding trial accuracy, present trial stimulus type, and time of day all affect the likelihood of a bird responding accurately during maintenance trials. Together, these findings suggest that response accuracy during maintenance may be depressed by our experimental design, which involves giving the subjects free access to food during late afternoon and early evening.

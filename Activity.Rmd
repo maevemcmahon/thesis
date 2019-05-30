@@ -1,0 +1,360 @@
+---
+title: "Activity"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+```{r include=FALSE}
+##Code to make outputs work:
+data <- read.csv("./Data/Masterbehaviourlist_editfor6016.csv")
+data$Day <- as.factor(data$Day)
+options(repos="https://cran.rstudio.com")
+
+library(dplyr)
+library(lme4)
+library(ggplot2)
+library(tidyr)
+library(MASS)
+library(lsmeans)
+library(car)
+library(captioner)
+library(simr)
+select <- dplyr::select
+
+res <- data %>%
+  group_by(Subject, Day, Period) %>%
+  count(Behavior) %>%
+  ungroup
+res$Condition <- 0
+res$Song <- 0
+
+for (i in 1:dim(res)[1]){
+  con <- data$Condition[which(data$Subject == res$Subject[i] & data$Day == res$Day[i])][1]
+  res$Condition[i] <- as.character(con)
+  
+  song <- data$Song[which(data$Subject == res$Subject[i] & data$Day == res$Day[i])][1]
+  res$Song[i] <- as.character(song)
+}
+res$Condition <- as.factor(res$Condition)
+res$Song <- as.factor(res$Song)
+res$Day <- as.factor(res$Day)
+
+res <- mutate(res, logN = log(n+1))
+res <- filter(res, Subject!="12_15_15") # Terrible data from this indiv
+res <- droplevels(res)
+
+confusion <- function(actual, predicted, names = NULL, printit = TRUE,
+ prior = NULL) {
+ if (is.null(names))
+ names <- levels(actual)
+ tab <- table(actual, predicted)
+ acctab <- t(apply(tab, 1, function(x) x/sum(x)))
+ dimnames(acctab) <- list(Actual = names, "Predicted (cv)" = names)
+ if (is.null(prior)) {
+ relnum <- table(actual)
+ prior <- relnum/sum(relnum)
+ acc <- sum(tab[row(tab) == col(tab)])/sum(tab)
+ }
+ else {
+ acc <- sum(prior * diag(acctab))
+ names(prior) <- names
+ }
+ if (printit)
+ print(round(c("Overall accuracy" = acc, "Prior frequency" = prior),
+ 4))
+ if (printit) {
+ cat("\nConfusion matrix", "\n")
+ print(round(acctab, 4))
+ }
+ invisible(acctab)
+ }
+```
+
+#Birds respond similarly to passive acute playback of songs associated with reward and punishment
+\chaptermark{Passive acute playback response}
+
+Responses to Go/No-Go stimuli in the context of operant conditioning can be simply assessed with whether the subject produced the Go or the No-Go response. However, this does little to inform us of the effect of the stimulus on the behavioural state of the subject. Here I train 10 female zebra finches on a Go/No-Go task; after training and four days of maintenance of the Go/No-Go discrimination, I expose the birds to 10 minutes of acute song playback of either the reinforced or the punished stimulus. During this song playback, I video record the birds' behaviours, and analyse these using an array of statistical techniques. I find no evidence for differential behavioural response to the Go and No-Go songs through linear discriminant analysis, principal components analysis, or by comparing nested generalised linear mixed models. I conclude that motor/behavioural responses to acute song playback are therefore unlikely to be a major factor in differential gene expression studies using the same playback assay.
+
+\newpage
+##Introduction
+In the previous chapter, I characterised the learning and maintenance of Go/No-Go discrimination in female zebra finches. In this chapter, I explore whether there are lasting differences in the spontaneous behavioural responses to the learned stimuli when they are encountered passively, in an unreinforced context. Behavioural responses to acute playback, without the need for birds to engage in operant conditioning for a food reward, could provide an understanding of the birds' affective or cognitive state. For example, an increase in behaviours associated with acute stress, such as puffing and flying towards the wall [@Olson2014], could indicate a learned subjective valence if associated with just the No-Go song, or an effect of playback novelty if associated with both the Go and No-Go songs. Therefore, discriminable patterns of responses during exposure to an unreinforced, but previously learned, stimulus could aid in understanding the emotional state of the subject, albeit with consideration that this approach has its limitations, which include the possibility that attentional, memory and/or judgement biases may co-vary with emotional state [@Paul2005].
+
+Behavioural responses to acute playback, without the presence of operant conditioning apparatus, can also aid in understanding the associations formed between the stimulus, response, and outcome. As described in Chapter 5, Go/No-Go conditioning goes beyond the simplest form of operant conditioning (i.e. a response-outcome association) and also includes the learning of a stimulus-response association, which is generally associated with classical conditioning [@Kirsch2004]. Therefore, I am interested in whether the stimulus-response association continues when there is no immediate response-outcome pairing nor the hunger motivation to engage with the operant apparatus; evidence, for example, that birds peck at the sensor in response to the Go but not the No-Go stimulus in response to acute unreinforced playback would provide support for persistance of operant performance even following devaluation of the stimuli [@Kirsch2004].
+
+Many studies have established that female zebra finches learn song preferences based on early life experiences [@Clayton1988; @Holveck2014; @Lauay2004], but it is unclear whether adult life experiences can also shape song preference. Avoidance learning through operant tasks has been shown to strongly alter response to stimuli [@Dalla2009] and for humans, reinforcement of food stimuli with innate low value can lead to subjects preferring the low-value stimulus in later choice trials [@Schonberg2014]. However, changes in preference for sexual stimuli such as songs for which innate preference can be measured, have not, to our knowledge, been demonstrated in adult female zebra finches. The use of sexual stimuli as the conditioned stimulus in the experiments described in Chapters 2, 4 and 5 complicates interpretation of response behaviour, as birds may respond on the basis of either innate preference for the sexual stimulus or preference learned through operant conditioning. Investigations of flavour preference, for which organisms have an innate preference, have demonstrated that it is possible to dissociate innate preference from learned preference [@Rozin1985]. Here, behavioural evidence that females respond differentially to the Go and No-Go stimuli in the absence of reinforcement and punishment might reflect a change in learned preference through the Go/No-Go conditioning.
+
+A secondary motivation arose from an allied analysis of brain gene expression patterns in those birds characterised in Chapter 3. Using RNA-Seq, @George2018 found an upregulated oxidative phosphorylation gene expression signature in the auditory forebrain when birds were exposed to the No-Go stimulus compared to the Go stimulus, in an unreinforced context just prior to euthanasia. Oxidative phosphorylation drives cellular energy provision [@Hall2012], and we reasoned that there might be differences in metabolic demand across the brain as a whole if there were gross differences in overt behavioural activity when birds encounter the two different stimuli. Alternatively, if the spontaneous behaviour patterns are similar in the two contexts, then the differences in gene expression may more specifically reflect the learned perceptual associations.
+
+###Aims and predictions
+The differential behavioural response to Go and No-Go stimuli (i.e. pecking a sensor, or withholding that response) during training and active maintenance is evident, as demonstrated in Chapter 5. Here I aim to characterise the response to acute unsolicited playback of these stimuli after training occurs. First, I predicted that acute playback of the trained stimuli would result in different activity levels to silence. Second, I predicted that there would be more than one pattern of behaviours, with, for example, a positive correlation between alarm calls and puffing. Finally, I predicted that these patterns of behaviours, or behavioural states, would be related to whether the bird heard the Go or the No-Go stimulus.
+
+##Methods
+
+###Animals
+10 female zebra finches (_Taeniopygia guttata_) originally from a breeding line at the University of Glasgow were bred at Queen Mary University of London in a large free breeding aviary (20-80 individuals, 3.9 m x 4.3 m). It is unknown which, if any, of the females here had previously been involved in breeding. Prior to the initiation of the experiment, they were then housed in a single sex aviary with 4-10 females at any given time (1.9 m x 2.0 m x 2.0 m high) for at least a week before being placed singly into a sound attenuation chamber with an operant conditioning setup. The birds ranged in age from 1-3 years, but exact hatch dates were not available for most invidivuals. The birds were kept on the same 16:8 light cycle (7:00 to 23:00) in the free breeding aviary, single sex aviary and in the sound attenuation chamber. Birds were given free access to food from 7:00 until 7:10, at which time the operant conditioning apparatus automatically initiated. Operant conditioning then continued until the experimenter left the premises, between 14:00 and 20:00. Animal housing and welfare were in compliance with the European directives for the protection of animals used for scientific purposes (2010/63/EU) under Procedures Project License PPL70-8183. 
+
+###Apparatus
+The birds were housed in a sound attenuation chamber fitted with an operant conditioning cage (43 cm w x 46 cm d x 42 cm h). The cage had a solid floor and back, with mesh on the remaining four faces. The back of the cage contained the operant conditioning peripheral equipment: a motorised food hopper and two LED/peck detectors. A Jawbone Mini Jambox speaker was placed on top of the chamber. Two Genius Widecam F100TL USB cameras were also placed on top of the chamber to maximise the visible range of the video recordings. A Raspberry Pi automatically controlled the operant conditioning, including the food hopper, LED/peck detectors, speaker, and the chamber light. Further details of the chamber design can be found in Chapter 3. Please refer to Figure 5.1 for a diagram of the chamber apparatus.
+
+###Stimuli
+For all birds, the early training stages used the same male zebra finch song and sine wave tone. The final training stage involved four different songs, and each bird received two of these in a counterbalanced design: one as the Go stimulus and another as the No-Go stimulus (\autoref{tab-trainplaybackstimuli}). These songs were matched for duration. All songs were from the population of zebra finches at the University of Leiden, and were therefore novel to the birds in this study. The song recordings were edited in Praat to include a 10ms on and off ramp [@Praat]. 
+
+Final song playbacks were created using Audacity, and consisted of one of the stimuli (either Go or No-Go) repeated once every 10 seconds for 10 minutes, for a total number of 60 song playbacks. This duration was chosen to balance the need for large changes in gene expression and the possibility that the birds' behavioural, and therefore neurogenomic, response to the song might be extinguished over many non-reinforced presentations. All stimuli were played at an SPL of 70 dB, measured using a Realistic sound level meter (Cat. No 33-2050, RadioShack) on the fast setting at the location where the bird's head would be after pecking the response sensor. Each bird received playback of both their Go and No-Go songs, counterbalanced so half of the birds heard a Go song on Day 1 (most matched to the original RNA-Seq study), and half of the birds heard a Go song on Day 2, after already having been exposed to a No-Go song on Day 1.
+
+\begin{table}
+\centering
+\caption{Training and playbacks for all ten individuals. Each song was recorded from a different male.}
+\label{tab-trainplaybackstimuli}
+\begin{tabular}{p{1.2cm}p{1.2cm}lp{1.2cm}p{1.2cm}}
+\toprule
+\multicolumn{2}{c}{Training} &  & \multicolumn{2}{c}{Playback}\\      \cmidrule(r){1-2} \cmidrule(l){4-5} 
+Go          & No-Go          &  & Day 1    & Day 2 \\
+\hline
+A           & B              &  & A        & B     \\
+B           & A              &  & A        & B     \\
+A           & B              &  & B        & A     \\
+B           & A              &  & B        & A     \\
+C           & D              &  & C        & D     \\
+D           & C              &  & C        & D     \\
+C           & D              &  & D        & C     \\
+D           & C              &  & D        & C     \\
+A           & B              &  & B        & A     \\
+B           & A              &  & B        & A     \\ 
+\bottomrule
+\end{tabular}
+\end{table}
+
+###Operant conditioning
+Please refer to Section 5.2.4 for details of the operant conditioning protocol.
+
+###Final playback
+The afternoon before final playback, the birds were taken off of the operant conditioning and again allowed _ad libitum_ access to food. The following morning, between four and six hours after the lights came on, the camera began recording video of the bird's activity for at least 10 minutes. Then the 10 minute playback was initiated. The camera stopped recording 20 minutes after the end of song playback, which was the point of death in the RNA-Seq experiment. If the bird had another playback planned for the following day, the bird then resumed operant conditioning until later in the day, when the same pre-playback procedure was followed. If the bird had completed its playbacks, it was returned to the aviary.
+
+###Video analysis
+The videos were coded using the BORIS software for behavioural observation [@Friard2016]. An "ethogram" was designed with 12 behaviours: pecking at the sensors, feeding, drinking, scooting (a movement along the same horizontal surface), hopping (a vertical movement), freezing, hugging the wall, preening, calling, alarm calling, puffing, and poking (pecking anywhere except the sensors). These behaviours were selected to cover as much of the spectrum of avian behaviour in the sound chambers as possible, with a focus on behaviours that might vary depending on the playback condition. A coder naive to treatment conditions, Joelle Clayton, coded the videos on her MacBook Pro. The BORIS software saved a time stamp for the initiation of each manually coded behaviour along with the behaviour ID. These data were then reformatted for statistical analysis.
+
+The resulting data included the number of incidences of each behaviour, the individual ID, whether the recording was from day 1 or 2 for each bird (day), whether the behaviour was performed before, during or after the playback (period), the song ID, and whether the playback song was a Go or a No-Go song for that individual (condition).
+
+###Statistics
+All statistics were carried out using the base stats package in R v3.3.3 unless otherwise stated.
+
+##Results
+###Overall activity is similar for both Go and No-Go playbacks
+Across all of the recordings, 33583 unique behaviours were logged (mean per individual = 4061, sd = 1904). Of these, only those falling in the 10 minutes before playback, the 10 minutes during playback, and the 10 minutes immediately after playback were included (mean = 3010, sd = 1494; \autoref{fig-behavplot}).
+
+```{r, echo=FALSE, fig.cap="\\label{fig-behavplot}Number of times each behaviour was performed during and after playback, by condition.", fig.width=6}
+resPlot <- filter(res, Period %in% c("During", "Post"))
+plot <- ggplot(resPlot, aes(x = reorder(Behavior, -n), y = n, fill = factor(Condition, labels=c("Go", "No-Go")))) +
+               geom_boxplot() + labs(x="Behaviour", y="Frequency", fill="Condition") + scale_y_log10() +                   theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+plot
+```
+
+To determine if there was an overall difference in activity level, all behaviours for each individual/period/condition combination were summed and subjected to a generalised linear mixed model (GLMM) with a Poisson error distribution and log link (lme4 package, R). This provided the best model fit as assessed by visual examination of modified qq-plots of residuals (DHARMa package, R), and also makes statistical sense as Poisson distributions are often used when modelling count data. Overdispersion due to zero-inflation was accounted for by including an observation-level random factor. As modelling zero-inflated data using observation level factors can sometimes lead to an increase in model bias [@Harrison2014], dual binomial/Poisson models were fitted using an expectation-maximisation algorithm to separately model the zero-likelihood and the Poisson distribution [e.g. @Bolker2012]. On the basis of both DHARMa-modified qq-plots of residuals and Aikake information criteria (AIC), these models did not fit the data as well as the simpler models presented below. As well as an observation-level random factor, the null model also contained a fixed effect of day (to control for any effect of the within-subjects counterbalanced design) and a random effect of individual. ANOVA comparisons of GLMMs demonstrate that the inclusion of condition, period, and an interaction between condition and period do not significantly improve the model fit (\autoref{tab-totalNGlmm}). Therefore, there are no significant main effects of condition or period, nor is there an interaction between condition and period on behaviour counts.
+
+\begin{table}
+\caption{GLMMs for total incidences of all behaviours.}
+\label{tab-totalNGlmm}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llrlllrr@{}}
+\toprule
+Model& Factors                               & df & AIC   & Log-likelihood & Comparator & $\chi^2$ test & P ($>\chi^2$) \\ \midrule
+NULL & Day + (1 | Individual) + (1 | Obs)    & 4  & 655.8 & -323.9         &            &               &               \\
+1    & NULL + Condition                      & 5  & 656.8 & -323.4         & NULL       & >0.99         & 0.32          \\
+2    & NULL + Period                         & 6  & 658.6 & -323.3         & NULL       & 1.25          & 0.53          \\
+3    & Model 1 + Period                      & 7  & 659.4 & -322.8         & Model 1    & 1.28          & 0.53          \\
+4    & Model 3 + Condition:Period            & 9  & 662.4 & -322.1         & Model 3    & 1.12          & 0.57    
+     \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+```{r, echo=FALSE, results="hide", eval=FALSE}
+#### For totalN analysis
+res2 <- select(res, -logN)
+pcres <- spread(res2, Behavior, n, fill=0)
+pcres$totalN <- rowSums(select(pcres, Alarm:Wall))
+pcres <- filter(pcres, Period %in% c("Pre", "During", "Post"))
+pcres$Period <- droplevels(pcres$Period)
+pcres$Obs <- seq(1:45)
+
+mNull <- glmer(totalN ~ Day + (1 | Subject) + (1|Obs), data=pcres, family=poisson)
+#mTest <- glmer(totalN ~ (1 | Subject) + (1 | Obs), data=pcres, family=poisson)
+m1 <- glmer(totalN ~ Condition + Day + (1 | Subject) + (1|Obs), data=pcres, family=poisson)
+m2 <- glmer(totalN ~ Day + (1 | Subject) + Period + (1|Obs), data=pcres, family=poisson)
+m3 <- glmer(totalN ~ Day + (1 | Subject) + Period+Condition + (1|Obs), data=pcres, family=poisson)
+m4 <- glmer(totalN ~ Day + (1 | Subject) + Period*Condition + (1|Obs), data=pcres, family=poisson)
+
+anova(mNull, m1)
+anova(mNull, m2)
+anova(m1, m3)
+anova(m3, m4)
+#anova(mNull, mTest)
+```
+
+```{r, echo=FALSE, fig.cap="\\label{fig-period}Total activity level by condition and period."}
+
+res2 <- select(res, -logN)
+pcres <- spread(res2, Behavior, n, fill=0)
+pcres$totalN <- rowSums(select(pcres, Alarm:Wall))
+pcres <- filter(pcres, Period %in% c("Pre", "During", "Post"))
+pcres$Period <- droplevels(pcres$Period)
+pcres$Obs <- seq(1:45)
+
+pcres$Period <- factor(pcres$Period, levels =  c("Pre", "During", "Post"))
+plot <- ggplot(pcres, aes(x = factor(Condition, labels=c("Go", "No-Go")), y = totalN, fill=factor(Period, labels=c("Before", "During", "After")))) +
+  geom_boxplot() + labs(y="Frequency", fill="Period", x="Condition")
+plot
+
+```
+
+A Levene's test on the log-transformed data did not support the visual suggestion (see \autoref{fig-period}) of less variance during the playback period than before or after after playback (*F*(2, 42) = 1.81, _p_ = 0.18; car package, R).
+
+```{r, echo=FALSE, eval=FALSE}
+#Levene's test of variance
+vartest <- leveneTest(log(pcres$totalN), pcres$Period)
+```
+
+###A linear discriminant analysis does not successfully classify playback conditions
+In order to determine if the differences in overall levels of activity were being driven by a subset of behaviour types, a linear discriminant analysis (LDA) was applied to the behaviours performed during and after playback (MASS package, R). On a correct cross validation challenge, the LDA performed slightly worse than chance, correctly categorising the individuals by condition 43.3% of the time (chance = 50%). Given that the activity levels during the period before playback varied by condition, another LDA was run on the interaction between period (including before, during and after playback) and condition. This LDA also performed worse than chance at cross validation, categorising to the correct combination of period and condition 13.3% of the time (chance = 16.7%). These correct cross validation scores indicate that there is no difference in condition between behaviours. 
+
+```{r, echo=FALSE, results="hide", eval=TRUE}
+pcres$Combo <- interaction(pcres$Period, pcres$Condition)
+
+pcres2 <- filter(pcres, Period %in% c("During", "Post"))
+pcres2 <- select(pcres2, c(Alarm:Wall, Condition))
+a1 <- lda(Condition ~ ., data=pcres2, CV=TRUE)
+ct <- table(pcres2$Condition, a1$class)
+#diag(prop.table(ct, 1))
+ccv.a1 <- sum(diag(prop.table(ct)))
+confusion(pcres2$Condition, a1$class)
+pcres3 <- select(pcres, c(Alarm:Wall, Combo))
+a2 <- lda(Combo ~ ., data=pcres3, CV=TRUE)
+confusion(pcres$Combo, a2$class)
+```
+
+###Principal components do not discriminate between activity-related states
+In order to determine if the 12 individually coded behaviours could be reduced to fewer dimensions, a principal component analysis (PCA) was carried out on the log-transformed and scaled behaviour counts for each subject/condition/period combination. The first principal component (PC) (negatively loading calling, feeding, hopping, pecking, poking and scooting) explains only 28.7% of the variance (\autoref{fig-behavPCA}). The second PC (negatively loading preening, puffing, scooting and wall, and positively loading feeding) explained 18.1% of the variance. 7 PCs were needed to account for 90% of the variance, suggesting that PCA does not provide simple effective dimensionality reduction for this data set. Further, the loadings for the PCs did not lend themselves to intuitive interpretation (e.g. PC1 strongly positively loading behaviours associated with stress, such as wall, alarm or puff).
+
+```{r, echo=FALSE, fig.cap="\\label{fig-behavPCA}Loadings for the PCA."}
+res2 <- select(res, -n)
+pcres <- spread(res2, Behavior, logN, fill=0)
+pcres <- filter(pcres, Period %in% c("Pre", "During", "Post"))
+pcres$Period <- droplevels(pcres$Period)
+
+pca1 <- prcomp(pcres[ ,c(6:17)], scale.=TRUE)
+pca1P <- pca1$rotation
+pca1P <- as.data.frame(pca1P)
+pca1P$Behaviour <- rownames(pca1P)
+pca1P <- gather(pca1P, "Component", "Value", 1:12)
+pca1P <- as.data.frame(pca1P)
+pca1P$Component <- as.factor(pca1P$Component)
+pca1P$Component <- factor(pca1P$Component, levels = c("PC1", "PC2", "PC3", "PC4", "PC5", "PC6", "PC7", "PC8", "PC9", "PC10", "PC11", "PC12"))
+ggplot(pca1P, aes(Component, Behaviour)) +
+  geom_raster(aes(fill=Value)) +
+ # scale_fill_brewer(palette="Spectral")
+  scale_fill_gradient2(midpoint=0) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+A MANOVA on the first five PCs (selected on the basis of the standard deviations of the PCs) indicates a main effect of period (_F_(10, 72) = 2.22, _p_ = 0.026), no main effect of condition (_F_(5, 35) = 0.262, _p_ = 0.93) and no interaction between condition and period (_F_(10, 72) = 0.179, _p_ > 0.99). A plot of PC1 versus PC2 (\autoref{fig-behavPCA1v2}; Panel A) and of PC1 versus PC3 (Panel B) demonstrates that there is no clear separation between conditions.
+
+```{r, echo=FALSE, warning=FALSE, fig.show="hold", fig.cap="\\label{fig-behavPCA1v2}Principal components plotted against each other. A) PC1 plotted against PC2. B) PC1 plotted against PC3."}
+library(cowplot)
+pcres$PC1 <- pca1$x[,1]
+pcres$PC2 <- pca1$x[,2]
+pcres$PC3 <- pca1$x[,3]
+pcres$PC4 <- pca1$x[,4]
+pcres$PC5 <- pca1$x[,5]
+man4 <- manova(cbind(pcres$PC1, pcres$PC2, pcres$PC3, pcres$PC4, pcres$PC5) ~ Condition + Period + Condition:Period, data=pcres)
+
+plot1 <- ggplot(pcres, aes(x = PC1, y = PC2, color = factor(Condition, labels=c("Go", "No-Go")))) +
+               geom_point() + labs(color="Condition") + theme(legend.position = "none") + ylim(c(-4, 2.5))
+plot2 <- ggplot(pcres, aes(x = PC1, y = PC3, color=factor(Condition, labels=c("Go", "No-Go")))) + geom_point() + labs(color="Condition") + ylim(c(-4, 2.5))
+plot_grid(plot1, plot2, labels="AUTO", rel_widths = c(1, 1.6))
+```
+
+###No individual behaviours vary by condition
+Finally, to determine if any individual behaviours varied by condition, a GLMM with a Poisson error distribution on the number of instances of each behaviour was carried out, with fixed effects of behaviour type (i.e. alarm, call, etc.), condition and period, and random effects of individual and observation-level to reduce the bias caused by overdispersion (lme4 package, R). Nested model comparisons indicated a main effect of behavior, no main effect of condition, no main effect of period, and no interaction between condition and behavior (\autoref{tab-GlmmIndivBehav}). I was unable to test for an interaction between period and behaviour or for a three-way interaction between period, behavior and condition due to our sample size causing rank deficiency. The main effect of behaviour was driven by calling, hopping and scooting all occuring more frequently than any of the other behaviours.
+
+\begin{table}
+\caption{GLMMs for individual behaviour types.}
+\label{tab-GlmmIndivBehav}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llrlllrr@{}}
+\toprule
+Model & Factors                            & df & AIC  & Log-likelihood & Comparator & $\chi^2$ test & P ($>\chi^2$)  \\ \midrule
+NULL  & Day + (1 | Individual) + (1 | Obs) & 4  & 3356 & -1774          &            &               &                \\
+1     & NULL + Behaviour                   & 15 & 3001 & -1485          & NULL       & 577           & \textless2e-16 \\
+2     & NULL + Condition                   & 5  & 3558 & -1774          & NULL       & 0.0042        & 0.95           \\
+3     & NULL + Period                      & 5  & 3560 & -1774          & NULL       & 0.11          & 0.94           \\
+4     & Model 1 + Condition                & 16 & 3002 & -1485          & 1          & 0.0001         & 0.99           \\
+5     & Model 4 + Condition:Behaviour      & 27 & 3014 & -1480          & 4          & 11.2          & 0.43           \\
+6     & Model 1 + Period                   & 17 & 2999 & -1483          & 1          & 5.4           & 0.068           \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+```{r echo=FALSE, results="hide", eval=FALSE}
+res2 <- select(res, -logN)
+res2 <- filter(res, Period %in% c("Pre", "During", "Post"))
+res2$Obs <- seq(1:dim(res2)[1])
+
+mNull <- glmer(n ~ Day + (1|Subject)+ (1|Obs), data=res2, family="poisson", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=2e5)))
+m1 <- glmer(n ~ Behavior + Day + (1|Subject) + (1|Obs), data=res2, family="poisson", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=2e5)))
+m2 <- m2 <- glmer(n ~ Day + Condition + (1|Subject) + (1|Obs), data=res2, family="poisson", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=2e5)))
+m3 <- glmer(n ~ Day + Period + (1|Subject) + (1|Obs), data=res2, family="poisson", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=2e5)))
+m4 <- glmer(n ~ Day + Behavior + Condition + (1|Subject) + (1|Obs), data=res2, family="poisson", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=2e5)))
+m5 <- glmer(n ~ Day + Behavior*Condition + (1|Subject) + (1|Obs), data=res2, family="poisson", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=2e5)))
+m6 <- glmer(n ~ Day + Behavior + Period + (1|Subject) + (1|Obs), data=res2, family="poisson", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=2e5)))
+
+anova(mNull, m1) # main effect of Behaviour
+anova(mNull, m2) # NO main effect of Condition
+anova(mNull, m3) # NO main effect of Period
+anova(m4, m1) 
+anova(m4, m5)
+anova(m6, m1)
+```
+
+###Individual differences in behavioural responses
+Although I did not find any significant differences in patterns of behaviour between conditions, I did find individual differences in behavioural responses to the song playback (\autoref{fig-indivBehav}). For example, the most active individual (Bird 16_1) had over twice as many recorded behaviours during the song playback as the least active individuals (Birds 16_6 and 51_15). Additionally, Bird 15_16 was unique in scooting along the same perch more than hopping from one perch to another. 
+
+```{r,echo=FALSE, fig.show="hold", fig.cap="\\label{fig-indivBehav}Individual differences in behavioural response to song playback."}
+indivDiffs <- res %>%
+  filter(Period == "During") %>%
+  group_by(Subject) %>%
+  mutate(sumN = sum(n))
+colnames(indivDiffs)[4] <- "Behaviour"
+levels(indivDiffs$Subject) <- c("15_14", "16_1", "16_6", "51_15", "60_16", "15_16", "U16_6", "16_3")  
+#indivDiffs$Behaviour <- factor(indivDiffs$Behaviour, levels = c("Alarm", "Freeze", "Puff", "Wall", "Drink", "Feed", "Call", "Hop", "Scoot", "Poke", "Peck", "Preen"))
+
+indivPlot <- ggplot(indivDiffs, aes(x = reorder(Subject, -sumN), y = n, fill = Behaviour)) + geom_col() + xlab("Subject") + ylab("Frequency") + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + scale_fill_brewer(palette="Set3") 
+indivPlot
+```
+
+###Power analysis
+In order to determine how much power our experiment had to find differences between conditions, I ran a power analysis on Model 1 from \autoref{tab-totalNGlmm} ($\alpha$ = 0.05, 1000 iterations; simr package, R). With our sample size there was 78% power to detect a medium effect size (0.5) of condition and 99% power to detect a large effect size (0.8) of condition. Therefore, there was not enough power to detect small effects of the total number of behaviours.
+
+```{r echo=FALSE, results="hide", eval=FALSE}
+m1 <- glmer(totalN ~ Condition + Day + (1 | Subject) + (1|Obs), data=pcres, family=poisson)
+fixef(m1)["ConditionNOGO"] <- -0.5 # medium
+fixef(m1)["ConditionNOGO"] <- -0.8 # large
+powerSim(m1)
+```
+
+##Discussion
+Here I found no evidence to suggest that overall activity levels in response to song playback vary depending on the previously learned association of that song. Therefore, activity levels are unlikely to have driven the difference in oxidative phosphorylation-related gene expression in a previous study. Given the relatively small sample size tested, I cannot rule out a small but significant effect of Go versus No-Go condition; however, the methods employed here would have been likely to discover a medium or large effect, which was not supported.
+
+###No evidence for an acute response to song presentation
+The most fundamental finding is that there is no overall change in activity levels during presentation of a conspecific song from the previous silence. This is surprising given that previous literature has found marked behavioural responses to acute passive song playback [@Verner1971; see @Dong2009 for a review]. Further, there is no interaction between behaviour type and period, suggesting that no individual behaviours change in response to acute song presentation. This finding is in contrast to a previous study, where birds were found to freeze for 1-2 minutes upon presentation of a conspecific song after previous habituation [@Stripling2003]. This should perhaps not be surprising, as the habituation procedure used by @Stripling2003 differed from ours. In their case, birds were placed in a sound attenuation chamber overnight before being presented with three hours of song playback. The following day, birds were again presented with the same song. In contrast, the zebra finches in the present study had been placed in the sound attentuation chamber for at least two weeks, and had been exposed to the songs for at least five days. I therefore propose that the birds in the present study were more behaviourally habituated to the song presentation than the birds in traditional habituation experimental designs [e.g. @Kruse2004], despite the change in song initiation (i.e. from bird-solicited during training to passive exposure during the playback).
+
+###No evidence for clusters of behaviours
+There was also no evidence that, with our set of behaviour definitions, birds perform patterns of behaviour that can be interpreted as discrete behavioural states. Further, a dimensionality reduction approach did not indicate that behaviours traditionally associated with a positive or neutral state (i.e. feeding, calling, drinking) cluster separately from behaviours traditionally associated with a negative or stressed state (i.e. flying to the wall, puffing). This can be contrasted with the playback of conspecific dominance interactions to corvids, where dimensionality reduction produces components associated with activity, vocalisation, and stress that vary by treatment type [@Massen2014]. Instead, I found that after being socially isolated in a sound attenuation chamber for a few weeks, patterns of behaviour do not vary consistently between individuals. 
+
+Additionally, I found no evidence that the presentation of a song associated with reinforcement elicits a different pattern of behaviours than a song associated with punishment. This contrasts with flavour preference studies on rodents and humans where innate flavour preferences can be altered by conditioning [@Rozin1985; @Schonberg2014]. Though I did not explicitly test birds' preference for the songs, the birds' behaviour does not indicate that they learned a preference for the Go song over the No-Go song. Future experiments should explicitly test whether the birds learn a preference (e.g. through a stereotaxic or operant design), and therefore whether the songs can be said to have taken on a valence. However, to date, there is no evidence that operant conditioning alters the preference for conspecific songs for female zebra finches. Further, I did not find any evidence for a classical conditioning-like effect on behaviours as the Go playback did not elicit an increase in pecking and/or feeding behaviours, and the No-Go playback did not elicit an increase in freezing behaviour, despite the learning of a stimulus-response-outcome association [@Kirsch2004].
+
+###Implications for interpretation of gene expression studies
+I suggest that these findings indicate that our operant conditioning training and maintenance experimental design, followed by passive exposure to a trained conspecific song, does not drive overt behaviour during song presentation. Therefore, gene expression studies that rely on this assay can conclude that it is unlikely that any differences between the Go and the No-Go condition are due to behavioural confounds. Specifically, an upregulation in oxidative phosphorylation in response to No-Go song playback can be interpreted as reflecting neural activity and not whole body activity [@George2018]. Additionally, ZENK _in situ_ hybridisation on animals tested using the same methodology is unlikely to be affected by basal stress levels [@Park2002], as we've found no evidence for increased stress behaviours in response to No-Go song playback.
+
+###Conclusion
+Here I found no evidence for discrete behavioural states among female zebra finches exposed to previously learned conspecific songs. I also found no evidence for an acute response to song playback. I suggest that the birds experienced the passive song playback passively, with no large shifts in behaviour during or after the song presentation. Further, I found that behaviour did not depend on the the previously learned association (i.e. the reinforcement or punishment) of the song. I conclude that neurogenomic shifts in response to this form of song presentation are unlikely to be driven by behaviour and instead represent a neural response to hearing previously learned song.

@@ -1,0 +1,112 @@
+---
+title: "Operant conditioning of song associations in the zebra finch: molecular, anatomical and behavioural characterisations"
+subtitle: 'Maeve McMahon'
+author: 
+- 'Submitted in partial fulfillment of the requirements of the Degree of Doctor of Philosophy'
+date: '30 May 2019'
+header-includes: 
+- \usepackage{placeins}
+- \usepackage{booktabs}
+- \usepackage{setspace}
+- \usepackage{fancyhdr}
+- \onehalfspacing
+- \usepackage{caption}
+- \usepackage{float}
+- \usepackage{multirow}
+- \captionsetup{justification=raggedright,singlelinecheck=false}
+- \usepackage{geometry}
+documentclass: book
+classoption: oneside
+output:
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+linkcolor: black
+fontsize: 12pt
+linestretch: 1.5
+bibliography: library.bib
+csl: apa-mcmahon.csl
+urlcolor: black
+geometry: "a4paper, left=4cm, right=2.5cm, top=2.5cm, bottom=2.5cm"
+graphics: yes
+---
+
+```{r setup, include=FALSE, fig.lp="fig:"}
+knitr::opts_chunk$set(echo = TRUE, fig.width=5, fig.height=3, fig.pos='H')
+library(ggplot2)
+library(knitr)
+```
+
+\newpage
+\FloatBarrier
+```{r child='Originality.Rmd'}
+```
+
+\newpage
+\FloatBarrier
+```{r child='Abstract.Rmd'}
+```
+
+\setcounter{tocdepth}{2}
+\tableofcontents
+\listoftables
+\listoffigures
+
+\newpage
+\FloatBarrier
+```{r child='Abbreviations.Rmd'}
+```
+
+\newpage
+\FloatBarrier
+```{r child='Acknowledgements.Rmd'}
+```
+
+\pagestyle{headings}
+\newpage
+\FloatBarrier
+```{r child='Introduction.Rmd'}
+```
+
+\newpage
+\FloatBarrier
+```{r child='ZENK.Rmd'}
+```
+
+\newpage
+\FloatBarrier
+```{r child='Operanter.Rmd'}
+```
+
+\newpage
+\FloatBarrier
+```{r child='Operanter2.Rmd'}
+```
+
+\newpage
+\FloatBarrier
+```{r child='Behaviour.Rmd'}
+```
+
+\newpage
+\FloatBarrier
+```{r child='Activity.Rmd'}
+```
+
+
+\newpage
+\FloatBarrier
+```{r child='Conclusion.Rmd'}
+```
+
+\phantomsection
+\pagestyle{plain}
+\chapter*{References}
+\addcontentsline{toc}{chapter}{References}
+<div id="refs"></div>
+
+\newpage
+\FloatBarrier
+```{r child='AppendixA.Rmd'}
+```
+

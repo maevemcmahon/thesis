@@ -1,0 +1,67 @@
+---
+title: "Abbreviations"
+output: html_document
+---
+
+\phantomsection
+\chapter*{List of Abbreviations}
+\addcontentsline{toc}{chapter}{List of Abbreviations}
+\pagestyle{plain}
+
+2-AFC — 2-alternative forced choice\newline
+ABX / AXB — operant conditioning\newline
+AIC — Aikake information criterion\newline
+ANOVA — analysis of variance\newline
+BDNF — brain-derived neurotrophic factor\newline
+BOLD — blood-oxygen-level dependent\newline
+BOS — bird's own song\newline
+BSA — bovine serum albumin\newline
+c — response bias\newline
+cDNA — complementary DNA\newline
+CLM — caudolateral mesopallium\newline
+CMM — caudomedial mesopallium\newline
+cNCM — caudal NCM\newline
+CPU — central processing unit\newline
+CSV — comma separated value\newline
+d$'$ — d prime, measure of sensitivity\newline
+dB — decibels\newline
+DLM — dorsolateral nucleus of the anterior thalamus\newline
+dNCM — dorsal NCM\newline
+dr — discrimination ratio\newline
+DTT — dithiothreitol\newline
+fMRI — functional magnetic resonance imaging\newline
+GLMM — generalised linear mixed model\newline
+GPIO — general purpose input output\newline
+GUI — graphical user interface\newline
+HVC — used as proper name\newline
+Hz — hertz\newline
+IEG — immediate early gene\newline
+LB — lysogeny broth\newline
+LDA — linear discriminant analysis\newline
+LED — light emitting diode\newline
+LMM — linear mixed model\newline
+MANOVA — multivariate analysis of variance\newline
+MB — megabyte\newline
+miRNA — micro RNA\newline
+MLd — dorsal lateral nucleus of the mesencephalon\newline
+MRI — magnetic resonance imaging\newline
+mRNA — messenger RNA\newline
+ms — milliseconds\newline
+NCL — caudolateral nidopallium\newline
+NCM — caudomedial nidopallium\newline
+OCT — optimal cutting temperature compound\newline
+Ov — nucleus ovoidalis\newline
+PBS — phosphate-buffered saline\newline
+PC — principal component\newline
+PCA — principal component analysis\newline
+PCR — polymerase chain reaction\newline
+RA — robust nucleus of the arcopallium\newline
+RNA-Seq — RNA sequencing\newline
+ROI — region of interest\newline
+SPL — sound pressure level\newline
+TIFF — tagged image file format\newline
+USB — universal serial bus\newline
+USD — United States dollars\newline
+vNCM — ventral NCM\newline
+XML — eXtensible markup language\newline
+ZENK — zif268, egr-1, NGFI-A, Krox24\newline

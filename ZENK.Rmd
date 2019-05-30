@@ -1,0 +1,568 @@
+---
+title: "ZENK"
+output:
+  html_notebook: default
+  word_document: default
+---
+
+```{r include=FALSE}
+data <- read.csv("./Data/ResultsZENK.csv")
+
+data$BirdID <- as.factor(data$BirdID)
+data$ROILat <- paste(data$ROI, data$Level, sep="")
+data$ROILat <- as.factor(data$ROILat)
+
+d <- data
+
+library(dplyr)
+library(knitr)
+library(tidyr)
+library(cowplot)
+library(lme4)
+library(lsmeans)
+library(lmerTest)
+library(igraph)
+library(Hmisc)
+
+```
+#_ZENK_ gene expression in auditory forebrain after exposure to stimuli with different learned associations
+\chaptermark{Neuroanatomical distribution of ZENK}
+
+Increased expression of the immediate early gene _ZENK_ has been used as a marker of both new memory formation, and recall or reconsolidation of old memories. The neuroanatomical pattern of _ZENK_ expression following exposure to a particular stimulus may thus give insight into how that stimulus is represented in the brain. Here I ask whether the same acoustic stimulus might be linked to different patterns of _ZENK_ activity in the auditory forebrain, depending on the associations the animal has already formed through previous exposure to that stimulus. 24 female zebra finches were trained using Go/No-Go operant conditioning to associate a song with either a food reward or a darkness punishment. After the animals learned to discriminate these songs, I analysed the neuroanatomical pattern of _ZENK_ expression following passive exposure to either the Go (reinforced) song, the No-Go (punished) song, a novel song, or a song made familiar through repeated unreinforced exposure. Visual analysis of _in situ_ hybridisation images revealed no consistent differences in the gross pattern of gene expression, nor did I detect any main effect of condition by quantitative analysis of pixel intensities in eight target regions within the auditory forebrain. However, applying a network analysis of covariance of _ZENK_ expression across those eight regions of the auditory forebrain, I observed a more correlated pattern of expression in response to exposure to the Go stimulus compared to the three other stimuli. These results lead to two main conclusions. First, simple passive exposure to a novel acoustic stimulus does not necessarily induce significantly greater _ZENK_ gene expression than habituated or previously trained stimuli, if the stimulus presentation occurs in a neutral and familiar context. Second, the same stimulus may elicit subtle variations in the neural networks within the responsive brain regions, depending on the valence of previously learned associations.
+
+
+\newpage
+##Introduction
+Many levels of neurobiological activity contribute to the encoding of experiences. Historically, studies have focused on synaptic plasticity [@Dubnau2003], but recent research has highlighted the role of gene expression in memory formation [@Clayton2000]. Gene expression can be studied as either changing patterns of large ensembles of genes across a region [e.g. @Dong2009a], or as the fine anatomical distribution of single genes [e.g. @Mello1992]. Evidence shows that maps of single genes can tell us, for example, whether a canary heard a whistle or a guitar note [@Ribeiro1998]. Indeed, the same stimulus can induce differential patterns of gene expression in different contexts [e.g. @Mello1995; @Jarvis1995a], and the distribution of the expression of a single gene can tell us about a recent exposure to a learned association [@Wheeler2013]. Could the neuroanatomical pattern of gene expression encode or reflect a previously established memory based on the valence of its association? In this chapter I will use operant conditioning to test this hypothesis.
+
+###Immediate early genes are a valuable tool for investigating gene expression in response to the environment 
+The genomic action potential analogy posits that immediate early gene (IEG) expression levels determine the likelihood of memory formation by mediating the translation of proteins involved in synaptic plasticity necessary for long-term memory storage [@Clayton2000]. These ideas are now well established among memory researchers, and the role of gene expression in the production of the memory engram is noncontroversial [@Poo2016]. The engram, or the physical changes in the brain that encode memories in response to external stimuli, has long been sought in individual brain regions [@Josselyn2015]. However, there is little evidence that most memories are localised to one brain region and studies have shown that multiple brain regions are involved in the recall of fear memories [@Tanaka2014]. The development of new methods in recent years have allowed researchers to map cells that are known, on the basis of their IEG activity, to be active during fear memory formation [@Liu2012]. These same cells, if then simultaneously stimulated using optogenetics, can induce a freezing response in the subject without presentation of the initial fear-inducing stimulus [@Liu2012]. This study, and others like it [e.g. @Tanaka2014], highlight the role of IEG-expressing cells in both memory formation and recall.
+
+The relationship between IEG expression and electrophysiology is often considered to be close enough to allow for the use of IEG expression as a proxy for neural activity [@Kubik2007]. In songbird NCM, both electrophysiological activity and IEG expression habituate in response to repeated playbacks of the same stimulus, although the electrophysiological activity does not habituate to near-zero levels as does the IEG expression [@Chew1996; @Mello1995; @Stripling1997]. IEG expression also correlates with fMRI-measured BOLD responses to song stimuli, with similar patterns found in female zebra finch brains in response to male conspecific songs [@Ruijssevelt2018]. Given the relationship between electrophysiological activity and IEG expression, the neuroanatomical distribution of IEGs or their protein products has been used in many studies as a "read-out" of neural activity, which is sometimes referred to as IEG imaging [e.g. @Ribeiro1998; @Terpstra2006].
+
+Given the role of IEG expression in learning, IEG imaging should perhaps be thought of as a proxy for plasticity-related activity [@Minatohara2016]. IEG expression, in high-level neuroanatomical regions, appears to represent the salience, or ethological relevance of a stimulus [@Clayton; @Smulders2013]. For example, in the auditory forebrain, expression of the IEG _ZENK_ is higher when a stimulus is paired with a shock rather than when the stimulus/shock are presented independently [@Jarvis1995a]. Additionally, conspecific songs induce higher levels of _ZENK_ expression in the zebra finch auditory forebrain than heterospecific songs, which in turn induce higher levels of _ZENK_ expression than sine wave tones [@Mello1992]. In contrast to these studies, where IEG expression is associated with the proposed salience of the stimulus in the context of active learning, IEG expression can also be induced by previously experienced stimuli: in one auditory forebrain region, the IEG protein product response to the presentation of the bird's tutor's song correlates with how accurately the bird learned the tutor song [@Bolhuis2001], and in another auditory forebrain region IEG expression is higher when females hear their father's song than when they hear novel songs [@Terpstra2006]. These studies indicate that as well as being elicited by novel stimuli, IEG expression may be elicited by exposure to previously learned stimuli that are no longer novel, but remain salient. This is in keeping with the evidence that IEG-expressing cells are involved in both memory formation and recall.
+
+The precise role of IEG expression may vary across the brain, but the study of whole-brain patterns of IEG expression can highlight networks of brain regions involved in responses to the stimulus of interest [@Hall2014; @Teles2015]. The development of graph theory approaches to study the relationships between brain regions has allowed researchers to uncover statistical networks that may represent actual neural connectivity [@Wheeler2013]. For example, recognition of a well-known conspecific elicits denser connectivity among brain regions than recognition of a less well-known conspecific [@Tanimizu2017]. Additionally, graph theory approaches can highlight differences in functional networks even where linear modelling finds no main effect of condition on the gene expression for all regions of interest [@Tanimizu2017]. Within the zebra finch auditory forebrain, where there are a large number of reciprocal projections between regions [@Vates1996], the use of graph theory can elucidate which of the regions respond in tandem. 
+
+###Auditory forebrain as a collection of high level auditory processing areas
+The auditory forebrain is a medial neuroanatomical region in the songbird brain shaped like a teardrop [@Kruse2004]. From rostral to caudal, it contains the caudomedial mesopallium (CMM), Field L2, and the caudomedial nidopallium (NCM). CMM and NCM function as auditory associative areas and are generally considered to store, at least partially, memory for conspecific song [@Gobes2007; @Terpstra2006; @Woolley2008]. Additionally, there are no clear boundaries between the medial CMM and the more lateral caudolateral mesopallium (CLM) nor between the NCM and caudolateral nidopallium (NCL) [@Ikeda2017]. Like CMM, CLM shows selective auditory responses [@Gill2008], but NCL is sometimes considered to be less specifically involved in auditory perception and more generally involved in cognitive function [@Gunturkun2005]. Analysis of the entire auditory forebrain has highlighted large-scale shifts in gene expression in response to conspecific song [@Dong2009a; @Gunaratne2011], but the formation and recall of operantly trained associative auditory memories may be mediated by any or all of the regions within the auditory forebrain. 
+
+####Caudal mesopallium
+The IEG response in CMM is known to respond to conspecific songs over heterospecific songs, and to show very little response to tones [@Mello1992]. Additionally, there is a greater _ZENK_ response in CMM when female canaries are exposed to sexy syllables than non-sexy syllables [@Leitner2005], and there is also a greater _ZENK_ response in CMM when female zebra finches are exposed to female-directed song than undirected song [@Woolley2008]. These studies indicate that CMM preferentially responds to preferred stimuli. However, this preference for high-quality song in CMM might require previous exposure to high-quality songs, and may not be an innate part of the female song perception system [@Lynch2017a; @Tomaszycki2006]. Father's song induces greater _ZENK_ expression in female zebra finch CMM than novel song, which may reflect either preference or novelty [@Terpstra2006]. Indeed, previous experience can dramatically modulate IEG expression in CMM. For zebra finches, the _ZENK_ response in CMM habituates upon repeated presentation of the same conspecific song [@Mello1995], but exposure to a novel conspecific song, or even to a change in the perceived spatial location of the previously habituated song, is sufficient to re-induce the _ZENK_ response [@Kruse2004]. Additionally, pairing a song with lights that turn on and off in time with the song can re-induce the _ZENK_ response, demonstrating that CMM is involved in more than purely auditory responses [@Kruse2004]. Visual presentation of a courtship stimulus, with no auditory component, can induce an intermediate ZENK protein respons in CMM, which may be due to previously learned associations between the visual and auditory components of a courtship display [@Avey2005a].
+
+A series of studies have explicitly tested the role of CMM in processing previously learned stimuli. @Gentner2004 found that, after learning to discriminate between rewarded and punished songs, starling CMM expressed the greatest _ZENK_ induction in response to novel songs, followed by rewarded/punished songs. The authors argue that this indicates that CMM is involved in associative learning, but the results could also be explained by the familiarity of the stimulus. In contrast, @Gentner2003 found that the electrophysiological response in starling CMM was greater to familar songs than novel songs, but that the response to songs associated with reward was also greater than to songs associated with punishment. More than simply the absolute response to rewarded/punished songs, starling CMM neurons encode more information about song motifs from rewarded songs than from punished or novel songs [@Jeanne2011]. In contrast, the male zebra finch CMM electrophysiological response is greater to rewarded and punished songs than to novel songs, with no difference in the magnitude of the response between rewarded and punished songs [@Bell2015]. It is unknown whether these differences in CMM response to trained and novel songs are due to small differences in experimental design/statistical analysis or the species of the subject.
+
+The boundary between CMM and CLM is as yet undefined, with the region between 1.0 mm and 2.7 mm from the midline especially unclear [@Ikeda2017]. In contrast to CMM, CLM has been studied in far less detail, but it does have a similar pattern of IEG responses as CMM to presentation of conspecific song [@Mello1994]. CLM neurons receive projections from Field L1 and L3 [@Vates1996] and other parts of the auditory forebrain [@Shaevitz2007] and are therefore likely to preferentially process conspecific information or at least reflect the processing that occurs in other regions of the auditory forebrain. Where it has been explicitly studied, CLM has been shown to encode stimulus surprise, and it therefore might function "as a mediator of bottom-up attention" [@Gill2008, p 2818]. In contrast to CMM neurons, CLM neurons encode less information about whether songs were previously rewarded or punished [@Jeanne2011]. The specific role of CLM among the numerous reciprocal projections of the auditory forebrain has yet to be determined, but evidence does suggest a role for it in the mediation of attention to salient stimuli.
+
+####Caudal nidopallium
+On the caudal side of Field L in the auditory forebrain lies the NCM. NCM, like CMM, exhibits greater _ZENK_ induction in response to conspecific song than to heterospecific song or silence [@Mello1992], and habituates in response to repeated presentation of the same conspecific song [@Chew1995a; @Mello1995]. But unlike CMM, NCM is posited to be the home of the tutor's song engram for male songbirds [@Pinaud2008], and normal NCM function is necessary for female zebra finches to prefer high quality males [@Tomaszycki2014]. For female zebra finches, familiarity, but not song quality, drives the _ZENK_ expression in NCM, wih unfamiliar songs eliciting greater _ZENK_ expression [@Woolley2008]. Similarly, for female canaries, _ZENK_ expression in NCM is not driven by the sexiness of syllables [@Leitner2005]. Electrophysiological activity in NCM is greater in response to unfamiliar songs than it is to songs that have been previously trained to be associated with a reward or a punishment [@Thompson2010]. It therefore appears as though NCM preferentially responds to unfamiliar or novel stimuli.
+
+However, NCM is a large region and many studies have highlighted differential patterns of response throughout. Most fundamentally, different syllables elicit different patterns of _ZENK_ expression in subregions of canary NCM, with natural stimuli eliciting more easily discriminable patterns than artificial stimuli [@Ribeiro1998]. Dorso-caudal NCM neurons habituate more to repeated presentations of the same song than ventro-rostral NCM neurons [@Chew1995a]. Additionally, for female white-throated sparrows exposed to conspecific song, _ZENK_ expression is higher in dorsal NCM (dNCM) than ventral NCM (vNCM) and higher in medial NCM than lateral NCM [@Sanford2010]. In one study of associative learning, vNCM neurons showed a strong increase in activity in response to unfamiliar songs over learned songs, whereas some dNCM neurons preferred familiar songs and others preferred learned [@Thompson2010]. However, discriminable activity within NCM is not found in all studies; @Gentner2004 found no significant change in _ZENK_ expression in starlings along either the medio-lateral or the ventro-dorsal axis. 
+
+Studies of associative memory in songbirds have sought to address the role of NCM in the formation and recall of these memories. @Thompson2010 found that electrophysiological activity in starling NCM correlates with the amount of exposure birds had to the associative conditioning, with neurons responding less to trained songs; novel and habituated songs elicited the same amount of firing, suggesting that NCM neurons "groove" to songs with associations, and that simple familiarity does not drive their activity. @Bell2015 found that male zebra finch NCM responds differently: songs associated with a reward elicited a greater magnitude electrophysiological response than songs associated with a punishment, and novel songs elicited a somewhat intermediate response. And in another study of starling NCM, _ZENK_ expression was greatest in response to novel song, with _ZENK_ expression similarly lower for previously trained songs and silence [@Gentner2004]. Therefore, a range of evidence suggests that NCM may be involved in encoding or recalling associative memories, but due to variations in experimental design, it is unclear whether familiarity interacts with the valence of the associated memory (i.e. whether the stimulus was associated with a reward or punishment), and whether different subregions of NCM may have independent patterns of response.
+
+Along the medio-lateral axis, there is no clear boundary between NCM and NCL [@Ikeda2017]. However, lateral to NCM (presumably ~ 1.0-1.5 mm from the midline) is a region (caudocentral nidopallium, NCC) where female-directed song induces greater _ZENK_ expression than undirected song; more lateral and more medial parts of the nidopallium do not show this distinction [@Ruijssevelt2018]. Lateral to the NCC is NCL, which is frequently likened to the mammalian pre-frontal cortex [@Gunturkun2005] and is necessary for working memory in pigeons [@Diekamp2002]. Therefore, careful consideration of the laterality of the _ZENK_ expression signal is necessary in order to determine whether the region under investigation is involved in auditory or more general functioning.
+
+To summarise, there is greatly conflicting evidence about the function of subregions in the auditory forebrain. In response to extreme treatment (e.g. silence versus repeated song), shifts in activity can be seen across the whole of the auditory forebrain [@Mello1992; @Dong2009a]. However, more subtle manipulations drive the regions differentially. Across a range of studies, CMM has been shown to respond more to high-quality songs than to low-quality songs [@Leitner2005; @Woolley2008]. However, this does not capture the range of CMM's processing capability, as it responds in complex ways to familiar songs [@Terpstra2006] and songs that have been trained to have a positive or negative association [@Bell2015; @Gentner2004]. NCM, in contrast, is generally not driven by the quality of songs [@Leitner2005; @Woolley2008], but responds differentially based on familiarity [@Thompson2010]. Additionally, there is evidence for a role of NCM in associative learning [@Gentner2004]. In order to determine if stimuli that have previously been trained to be associated with a reward or a punishment elicit different patterns of IEG expression in subregions of the auditory forebrain, it is necessary to carefully control both the training and the eventual presentation of the stimuli.
+
+###Aims and hypotheses
+Drawing together the precedents above, I hypothesise that the learned valence of an acoustic stimulus is encoded by, or represented in, different patterns of _ZENK_ expression within NCM and CMM. If true, this would provide new insight into the mechanisms by which integrated representations of salient experience are formed in the brain. To test this hypothesis I will use Go/No-Go operant conditioning to train female zebra finches to associate one conspecific song with a reward and another conspecific song with a punishment. The presentation of conspecific songs is, itself, rewarding to female zebra finches [@Holveck2007], but the acute presentation of a food reward or darkness punishment will also become associated with the song stimuli. In contrast to previous studies [e.g. @Gentner2004], I will not test birds during the ongoing operant conditioning procedure, but will instead present a passive playback following discrimination training. In this way, I aim to test the IEG response to the song presentation and not its involvement in discrimination learning. Additionally, familiarity and song preference will not be confounded [as in e.g. @Terpstra2006], and the rewarded and punished songs will be fully counterbalanced so that any effects are due to the learned association, and not due to acoustic parameters.
+
+From my hypothesis, I make the following predictions: 1) after Go/No-Go conditioning, subsequent exposure to either class of conditioning stimuli will result in different neuroanatomical patterns of _ZENK_ expression, as revealed by _in situ_ hybridisation. 2) _ZENK_ gene expression in the auditory forebrain will be very low for birds in the habituated condition, and high for birds in the novel condition. 3) Overall levels of _ZENK_ gene expression in the auditory forebrain for the Go and the No-Go conditions will fall in between that of the habituated and novel conditions. 4) Brain regions associated with reward and stress networks will differentially express _ZENK_ when the animal is re-exposed to a conditioned stimulus. 5) Finally, I predict that in the absence of consistent patterning of _ZENK_ in response to Go and No-Go songs, I will find differential patterns of recruitment of regions within the auditory lobule that can be detected using graph theoretical approaches.
+
+##Methods
+###Animals
+24 female zebra finches were operantly trained, tested, and decapitated for _in situ_ hybridisation at the University of Leiden. All birds were bred and reared at the Leiden University animal breeding facility and at the start of the experiment were aged between 246 and 424 days post hatch and had not participated in previous experiments. The birds were housed in a single sex aviary on a 13.5:10.5 light:dark schedule kept at 20-22$^\circ$C; they were removed from this single sex aviary in groups of four and placed into the operant conditioning apparatus (described below). Throughout the experiment, water and cuttlebone were available _ad libitum_. Access to food was restricted to reinforcement of correct Go responses; the birds' health was monitored to ensure sufficient eating. The study was approved by the University of Leiden and complied with Dutch animal welfare regulations.
+
+###Operant conditioning
+The birds were allowed to acclimatise overnight to the sound attenuation chamber with _ad libitum_ access to food and water. Four hours after the lights came on, the food hopper closed and the birds began the first stage of training. Birds retained _ad libitum_ access to water and cuttlebone throughout the experiment.
+
+The first stage of training involved the birds learning to associate a peck to either sensor and the subsequent opening of the food hopper for 10 seconds. Once the birds had pecked either sensor ~200 times, the birds progressed to stage two, when they had to learn to peck the sensors in sequence. During stage two, the birds were only rewarded with access to food if they first pecked the left sensor followed by the right sensor within 30 seconds of the first peck. This time was reduced to 6 seconds once the birds learned the pecking sequence. At this point, a song, which was not used for the final training, was played when the birds pecked the left sensor. 
+
+The third stage of training introduced the Go/No-Go procedure. The birds were taught that if they pecked the left sensor and heard the song, they could peck the right sensor (Go response) and receive a food reward, as in the latter parts of stage two. However, punished trials were introduced at a rate of 80% rewarded to 20% punished. For these trials, a sine wave tone (440 Hz) was played when the bird pecked the left sensor; the bird had to learn not to peck the right sensor (No-Go response). If they did peck the right sensor, the chamber light would go out for 10 seconds and the bird would not receive a food reward. During stage four, the ratio of rewarded to punished trials was altered to 50% each.
+
+Following training, the birds were swapped to two novel songs as the Go and the No-Go stimuli. Once they learned this discrimination to a criterion of 0.80 discrimination ratio (defined as the proportion of correct responses to Go stimuli divided by the summed proportion of correct responses to Go stimuli and the proportion of incorrect responses to No-Go stimuli), they had to maintain their performance for 4 days before initiation of the final playback.
+
+###Operant conditioning apparatus
+Birds were housed for 3-4 weeks in mesh and plywood cages that contained operant conditioning apparatus (70 cm w x 30 cm d x 45 cm h). The floor was covered with sand. Each cage included two red LED/buttons, a food hopper to which access was limited by a vertical motorised cover, and a water container (\autoref{fig-chamberdiagram}). The cage was singly placed in a small sound attenuated room kept at the same 20-22$^\circ$C as the single sex aviary. The room was illuminated by a fluorescent tube that emitted daylight spectrum light on the same 13.5:10.5 schedule as the single sex aviary placed on top of the cage and controlled by the operant conditioning software. A Vifa 10BGS119/8 speaker was located 0.6 m above the top centre of the cage.
+
+```{r echo=FALSE, fig.cap="\\label{fig-chamberdiagram}Diagram of the operant conditioning apparatus in the sound attenuation chamber. A) Setup for Go, No-Go, and novel conditions. 1 & 3 are sensors. 2 is the food hatch. B) Setup for habituated condition. Sensors and food hatch same as three other conditions. 1 & 2 are the stimulus lights. "}
+include_graphics('./External_images/Ardern_operant.pdf')
+```
+
+###Experimental design
+24 birds were allocated into 4 conditions, ensuring an even spread of ages in all conditions, for a total of 6 birds per condition. 4 birds, 1 from each condition, formed a set, and all birds within a set heard the same final playback. The conditions were defined by the final playback: Go, No-Go, Novel, and Habituated (\autoref{tab-expDesign}). For example, for set 1, the Go condition bird was trained on Song A as the Go stimulus and Song B as the No-Go stimulus. Inversely, the No-Go condition bird was trained on Song B as the Go stimulus and Song A as the No-Go stimulus. Birds in the Novel condition learned songs C and D as the Go and No-Go stimuli. The Habituated condition varied from the previous 3 conditions in that the Go/No-Go stimuli were red and green LEDs, and not songs. The sound from either the paired Go or No-Go bird's chamber was live piped into the "yoked" Habituated bird's chamber. This ensured that the Habituated bird was exposed to the same acoustic environment as the paired Go or No-Go bird, but that those songs were not associated with reward or punishment. The LED-based operant conditioning ensured that the Habituated birds were in a similarly cognitively enriched environment as the birds in the other conditions. The final song playback for all birds in set 1 was Song A. Therefore, 4 birds (i.e. one bird per condition) all heard the same Song A playback, ensuring that any differences in behavioural or neural activity were due to the experience the bird had with that song and not with the acoustic structure of the song. 6 different playback songs were used to reduce pseudoreplication.
+
+\begin{table}[]
+\centering
+\caption{Go and No-Go training and playback stimuli for all conditions.}
+\label{tab-expDesign}
+\begin{tabular}{lllll}
+                           &            & \multicolumn{3}{c}{Stimulus}              \\
+                           &            & \multicolumn{2}{c}{Training} & Testing    \\ \cline{3-5} 
+                           &            & Go           & No-Go         & Playback   \\ \cline{3-5} 
+\multirow{4}{*}{Condition} & Go         & A            & B             & A          \\
+                           & No-Go      & B            & A             & A          \\
+                           & Novel      & C            & D             & A          \\
+                           & Habituated & Red          & Green         & A         
+\end{tabular}
+\end{table}
+
+###Stimuli
+All songs were recorded in the Clayton aviary by McMahon and Dr Lachlan in 2014. In a two-sided cage with an opaque barrier down the middle, one male was placed in the left half and one female was placed in the right half. This cage was then moved into a large sound attenuated chamber fitted with sound recording equipment. When the opaque barrier was removed, in order to allow the two birds to physically interact, the sound chamber was closed and the recording began. This elicited directed song from the male towards the female.
+
+All of the songs were novel to the Leiden birds. Matched songs were selected to have equal durations (no more than +/- 10%) and to maximise human-perceived differences in syllable content. 12 songs were selected (4 for each condition) (\autoref{tab-songPairs}). Praat software was used to introduce a 10 ms ramp up and down at the beginning and end of each song and to normalise the average intensity of the sound recording to 70 dB SPL [@Praat]. All songs were played at 70 dB SPL, measured using a Realistic sound level meter (Cat. No. 33-2050, RadioShack) on the fast setting at the location of the bird's head after pecking a sensor. Final playback recordings were produced using Audacity 2.0.5. Each song was repeated once every 10 seconds for 10 minutes, for a total of 60 repetitions.
+
+
+\begin{table}[]
+\centering
+\caption{Song pairs for training, where subscripts denote different male directed songs.}
+\label{tab-songPairs}
+\begin{tabular}{llllllll}
+                           &                                 & \multicolumn{6}{c}{Set}                                                                                                                       \\
+                           &                                 & \multicolumn{1}{c}{1} & \multicolumn{1}{c}{2} & \multicolumn{1}{c}{3} & \multicolumn{1}{c}{4} & \multicolumn{1}{c}{5} & \multicolumn{1}{c}{6} \\ \cline{3-8} 
+\multirow{4}{*}{Condition} & \multicolumn{1}{l}{Go}         & A\textsubscript{1}B\textsubscript{1}                  & C\textsubscript{1}D\textsubscript{1}                  & A\textsubscript{2}B\textsubscript{2}                  & C\textsubscript{2}D\textsubscript{2}                  & A\textsubscript{3}B\textsubscript{3}                  & C\textsubscript{3}D\textsubscript{3}                  \\
+                           & \multicolumn{1}{l}{No-Go}      & B\textsubscript{1}A\textsubscript{1}                  & D\textsubscript{1}C\textsubscript{1}                  & B\textsubscript{2}A\textsubscript{2}                  & D\textsubscript{2}C\textsubscript{2}                  & B\textsubscript{3}A\textsubscript{3}                  & D\textsubscript{3}C\textsubscript{3}                  \\
+                           & \multicolumn{1}{l}{Novel}      & C\textsubscript{1}D\textsubscript{1}                  & A\textsubscript{1}B\textsubscript{1}                  & C\textsubscript{2}D\textsubscript{2}                  & A\textsubscript{2}B\textsubscript{2}                  & C\textsubscript{3}D\textsubscript{3}                  & A\textsubscript{3}B\textsubscript{3}                  \\
+                           & \multicolumn{1}{l}{Habituated} & A\textsubscript{1}B\textsubscript{1}                  & C\textsubscript{1}D\textsubscript{1}                  & A\textsubscript{2}B\textsubscript{2}                  & C\textsubscript{2}D\textsubscript{2}                  & A\textsubscript{3}B\textsubscript{3}                  & C\textsubscript{3}D\textsubscript{3}                 
+\end{tabular}
+\end{table}
+
+###Tissue collection
+To minimise between-condition differences of behavioural startling in response to song playback, the operant apparatus was turned off the afternoon before tissue collection and birds were given _ad libitum_ access to food. On the morning of tissue collection, the final playback recording was initiated between 3 and 4 hours after the lights came on. The playback lasted for 10 minutes, followed by 20 minutes of silence. The 10 minute playback minimised the risk of extinction of the operantly-learned association due to repeated unsolicited song playback, and the total 30 minute duration from start of playback to decapitation maximised _ZENK_ mRNA in response to song [@Mello1995]. After the period of silence, the birds were captured, decapitated, and the brain tissue was bissected laterally and placed with the medial side down into a mould containing OCT. The brain was covered with more OCT and the mould was immediately frozen in a dry ice and isopropanol slurry before being placed in -80$^\circ$C for long-term storage. The process of catching, dissecting and freezing took no more than 6 minutes.
+
+###Tissue sectioning
+The right hemispheres of OCT-mounted brain tissue were removed from -80$^\circ$C storage, placed in a Leica cryostat and allowed to equilibrate to -20C. Parasagittal sections were cut on the cryostat (with the assistance of Dr George). Three sections from each 100 $\mu$m were collected from the midline to the distal edge. A total of ~144 sections were collected per hemisphere (i.e. 12 slides with 4 sections per slide, and 3 series of 12 slides) onto Superfrost Plus slides. Slides were fixed in a 3% w/v paraformaldehyde in PBS (pH 7.4) solution for 5 minutes before being briefly rinsed in PBS (pH 7.4), dehydrated in an ascending ethanol series (70%, 95%, 100%) for 2 minutes each, air-dried, and stored at -80$^\circ$C.
+
+###In situ hybridisation
+A well-established _in situ_ hybridisation protocol was followed for the _ZENK_ hybridisation [@Carleton2014].
+
+Riboprobes were prepared by obtaining plasmid (containing zebra finch _ZENK_ cDNA from laboratory stocks). Plasmids were amplified in DH5$\alpha$ cells using heat shock. Cells were then streaked onto LB agar plates with ampicillin, which were incubated at 37$^\circ$C for 16 hours. Single colonies were selected using a pipette tip and used to inoculate a 5 mL LB/ampicillin media. The culture tubes were placed on a shaker for 12-16 hours at 37$^\circ$C. Fresh _ZENK_ stock was obtained from cell cultures using a plasmid purification kit (QIAPrep Spin Miniprep Kit). Plasmid samples were then tested on a Nanodrop to determine concentration and for quality control checking. Plasmid DNA was then sequenced using the Eurofins sequencing service and confirmed by BLAT-alignment against a recent zebra finch genome assembly using the UCSC genome browser.
+
+20 $\mu$m of plasmid DNA was linearised using a BssHII digestion. A PCR puification kit (GENEJet) was used to purify the cDNA from enzymes and salts. Antisense riboprobes were generated from the cDNA template in a solution containing 1 $\mu$g T3 RNA polymerase, 1X digoxigenin(DIG)-11-UTP RNA labelling kit (Roche), 2 U/$\mu$L recombinant RNAsin, 1 $\mu$g/$\mu$L BSA, 10mM DTT, and 1 $\mu$g digested clone at 37$^\circ$C for 2-3 hours. The riboprobe synthesis reaction was then equilibrated on a Sephadex G-50 column and stored at -80$^\circ$C. 
+
+Slides were removed from -80$^\circ$C and allowed to briefly thaw at room temperature. Each 24-slide hybridisation batch contained one slide from each bird. 14 total batches were conducted; three of these batches contained a _ZENK_ sense riboprobe control. The slides were acetylated (TEA 1.35% v/v, acetic anhydride 0.25% v/v) for 10 minutes, rinsed three times in a 2X SSPE buffer, and dehydrated in an ascending ethanol series (70%, 95%, 100%; 2 minutes each) before being allowed to air dry. 16 $\mu$L of hybridisation solution (6.25% v/v purified riboprobe at 1 ng/$\mu$L, 1 $\mu$g/$\mu$L PolyA, 1 $\mu$g/$\mu$L BSA, 2 $\mu$g/$\mu$L tRNA, 2X SSPE, 50% v/v deionised formamide) was pipetted onto each section and sections were then coverslipped. Slides were loaded into a vertical slide rack and immersed into 65$^\circ$C-equilibrated heavy paraffin oil. Hybridisation proceeded for 12-18 hours.
+
+Following hybridisation, the slide rack was removed from the paraffin oil and transferred to three chloroform baths (2 minutes each) to remove remaining paraffin oil. Slides were left to slightly air dry before being placed into 2X SSPE for a few minutes to aid in coverslips falling off without damaging the tissue. The slides were then transferred into a solution containing 50% v/v 2X SSPE and 50% v/v formamide for 90 minutes with regular agitation. Slides were transferred into 65$^\circ$C 0.1X SSPE for 30 minutes with regular agitation. This last step was repeated with fresh SSPE. Slides were then transferred to TNT buffer (100 mM Tris-HCl (pH 7.5), 150 mM NACl, 0.3% v/v Triton-X).
+
+Slides were removed from TNT buffer, dried where necessary using cotton buds, and the area with sections was encircled with a PAP pen. TNB blocking buffer (100 mM Tris-HCl (pH 7.5), 150 mM NaCl, 0.36% w/v bovine serum albumin) with 0.1% v/v skim milk was filtered using a 0.22 $\mu$m syringe. 200 $\mu$L TNB was pipetted onto each slide. Slides were incubated in a humidifed chamber at room temperature for 30 minutes. The blocking buffer was tipped off and 200 $\mu$L TNB blocking buffer with 0.1% v/v skim milk and anti-digoxigenin antibody (1:600) was pipetted onto each slide. Slides were incubated in a humidified chamber at room temperature for 2 hours. The antibody solution was tipped off and slides were washed twice in TMN (100 mM Tris-HCl (pH 9.5), 150 mM NaCl, 5mM MgCl\textsubscript{2}) for 15 minutes each. Slides were then placed in Coplin jars containing 30 mL of filtered NBT/BCIP. The jars were protected from light and agitated for 12-20 hours. Colour development was checked, and when sufficient, slides were transferred to ddH2O for 1 hour with agitation. Slides were then allowed to air dry before being coverslipped with VectaMount AQ mounting media.
+
+###Image analysis
+Slides were digitally photographed using a Hammamatsu NanoZoomerslide scanner (objective x40). All remaining image processing was conducted using the Fiji distribution of ImageJ [@Schindelin2012; @Schneider2012]. Whole slide images were automatically segmented into 4 TIFF images, each with one brain section at object x10, using the ndpsisplit command [NDPITools plugin, @Deroulers2013]. Sections were manually selected to best represent regions of interest (ROI) within the auditory forebrain (a medial song-responsive region containing CMM, NCM and Field L), at 0.5 mm and 1.2 mm from the midline using the ZEBrA histological atlas as a reference [@zebraOnline]. Individual ROIs were specified using the base ImageJ ROI Manager (\autoref{fig-regionsofinterest}).
+
+```{r echo=FALSE, fig.cap="\\label{fig-regionsofinterest}Neuroanatomy for region of interest selection. A) Parasagittal whole brain section, 1.2 mm from midline, where right is towards the beak. B) A zoomed-in image of the auditory forebrain region, with rectangular regions of interest placed as for the image analysis"}
+include_graphics('./External_images/Zenk_rois.pdf')
+```
+
+CMM was represented by a ROI defined as a square (0.5 mm from midline: 400 $\mu$m x 400 $\mu$m; 1.2 mm from midline: 600 $\mu$m x 600 $\mu$m) placed halfway along the rostral length of Field L, with one edge perpendicular to the long axis of Field L. Three ROIs, captured with squares (0.5 mm from midline: 400 $\mu$m x 400 $\mu$m; 1.2 mm from midline: 600 $\mu$m x 600 $\mu$m), were placed within NCM to capture dorsal, ventral, and caudal regions. The dorsal NCM (dNCM) ROI was placed as dorsally as possible within NCM, with one edge perpendicular to the caudal long axis of Field L. The ventral NCM (vNCM) ROI was placed ventrally within NCM, with one edge perpendicular to the caudal long axis of Field L and with the ventral corner of the ROI placed at the ventral edge of Field L. For sections 1.2 mm from the midline, the caudal NCM (cNCM) ROI was placed halfway between the dNCM and vNCM ROIs, with its most rostral edge aligned with the caudal edges of the dNCM and vNCM ROIs. For sections 0.5 mm from the midline, the cNCM ROI was placed halfway between the dNCM and vNCM with its most caudal edge placed along the caudal edge of the teardrop shaped auditory forebrain. The whole telencephalon was selected using the polygon tool. 25-35 points were manually selected around the visually identified edges of the whole telencephalon; these points erred on the internal side of the edge so as not to select slide background, and a straight line was drawn from the indentation under the occipital membrane to the indentation under the medial striatum in order to minimise the error associated with manually determining where the telencephelon/diencephalon boundary occurs.
+
+Using the ImageJ Measure tool, the area of the ROI, mean/standard deviation/min/max/median pixel intensity (from 0 to 255, where 0 is black and 255 is white), and the skewness and kurtosis of pixel intensity were calculated. Pixel intensity measurements were then subtracted from 255 (the maximum possible pixel intensity) for ease of interpretation; in subsequent analyses, higher numbers for pixel intensity reflect more intense staining. These measurements were imported into R (v3.3.3; RStudio v1.0.136) for further data processing.
+
+###Graph theory
+For each condition (i.e. Go, No-Go, Novel, Habituated), an undirected graph was produced (igraph package; R). The residuals from the null linear mixed model (the remaining variance once the data was normalised) from each ROI were correlated with model residuals from all other ROIs. Each ROI was modelled as a node, and for all correlations where _p_ < 0.10, weighted edges were created between ROIs with the correlation coefficient (r) as the edge weight.
+
+##Results
+
+###Zebra finches learn to discriminate Go from No-Go stimuli
+Zebra finches learn to discriminate between two conspecific songs when one is presented as a Go stimulus and the other as a No-Go stimulus (\autoref{fig-zenklearning}). The total number of 100-trial bins of final song presentations ranged from 18-63 (mean = 36.8, sd = 9.2) depending on the bird's learning rate. d$'$ (a measure of sensitivity/accuracy from signal detection theory that is robust to bias; calculated by substracting the z-score of the false alarm rate from the z-score of the hit rate) reliably increases through learning (\autoref{fig-zenklearning}; Panel A). The discrimination ratio (dr, a measure of accuracy used by the ten Cate lab at the University of Leiden; the hit rate divided by the sum of the hit rate and the false alarm rate) also increases through learning (\autoref{fig-zenklearning}; Panel B). Habituated birds, who were trained using lights, appear to have a flat learning curve because they had already reached criterion at the time point when their paired bird was first presented with two conspecific songs. There is no significant difference between conditions in final discrimination performance (ANOVA on d$'$ scores for the final 5 100-trial bins for each bird, by condition; _F_(3, 19) = 0.27, _p_ = 0.85; ANOVA on dr scores for the final 5 100-trial bins for each bird, by condition; _F_(3, 19) = 0.85, _p_ = 0.48). In (\autoref{fig-zenklearning}), the beginning of the final 5 100-trial bins ranged from 0.72 to 0.92 (mean = 0.86) on the x-axis.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-zenklearning}Learning and maintenance of Go/No-Go discrimination for all four conditions. X-axis is 100-trial bin number normalised across birds by dividing the bin number by the maximum number of bins for each individual bird. Y-axis is A) d$'$ and B) discrimination ratio. Lines of best fit are logarithmic functions with standard error shading.", fig.width=8, fig.height=4}
+
+LeiData <- read.csv("./Data/LeidenActivity.csv")
+LeiData$BirdID <- as.factor(LeiData$BirdID)
+LeiData <- LeiData %>%
+  select(BirdID, Stimulus, Correct, Bin, Cohort)
+
+howmanybins <- LeiData %>%
+  group_by(BirdID) %>%
+  summarise(maxBins = max(Bin))
+meanbins <- mean(howmanybins$maxBins, na=TRUE)
+sdbins <- sd(howmanybins$maxBins, na=TRUE)
+
+LeiData$BirdID <- as.factor(LeiData$BirdID)
+LeiData$Cohort <- as.factor(LeiData$Cohort)
+
+minBin <- 0
+maxBin <- 100
+Go <- LeiData %>%
+  filter(Bin > minBin) %>%
+  filter(Bin < maxBin) %>%
+  filter(Stimulus=="GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(TotalGo = n())
+  
+NoGo <- LeiData %>%
+  filter(Bin > minBin) %>%
+  filter(Bin < maxBin) %>%
+  filter(Stimulus=="NO-GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(TotalNoGo = n())
+
+CorrGo <- LeiData %>%
+  filter(Bin > minBin) %>%
+  filter(Bin < maxBin) %>%
+  filter(Stimulus=="GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(CorrectGo = sum(Correct))
+
+CorrNoGo <- LeiData %>%
+  filter(Bin > minBin) %>%
+  filter(Bin < maxBin) %>%
+  filter(Stimulus=="NO-GO") %>%
+  group_by(Bin, BirdID) %>%
+  summarise(CorrectNoGo = sum(Correct))
+  
+GNG <- left_join(Go, NoGo, by=c('Bin', 'BirdID'))
+Corr <- left_join(CorrGo, CorrNoGo, by=c('Bin', 'BirdID'))
+All <- left_join(GNG, Corr, by=c('Bin', 'BirdID'))
+
+All <- All %>%
+  filter(!is.na(CorrectGo)) %>%
+  filter(!is.na(TotalGo)) %>%
+  filter(!is.na(CorrectNoGo)) %>%
+  filter(!is.na(TotalNoGo)) %>%
+  filter(BirdID != 301) %>%
+  select(Bin, BirdID, TotalGo, TotalNoGo, CorrectGo, CorrectNoGo)
+
+LeiData2 <- read.csv("./Data/Leiden_condition.csv")
+LeiData2$BirdID <- as.factor(LeiData2$BirdID)
+All <- left_join(All, LeiData2, by="BirdID")
+
+
+All$zHIT <- qnorm(All$CorrectGo/All$TotalGo)
+All$zFA <- qnorm(1- All$CorrectNoGo/All$TotalNoGo)
+All$zHIT[All$zHIT==Inf & All$zHIT > 0] <- 3.71
+All$zHIT[All$zHIT==-Inf & All$zHIT < 0] <- -3.71  
+All$zFA[All$zFA==Inf & All$zFA > 0] <- 3.71
+All$zFA[All$zFA==-Inf & All$zFA < 0] <- -3.71
+All$dr <- All$CorrectGo/All$TotalGo / (All$CorrectGo/All$TotalGo + (1 - (All$CorrectNoGo/All$TotalNoGo)))
+# correct responses to Go stimuli divided by the sum of the proportion correct responses to Go stimuli and the proportion incorrect responses to No-Go stimuli)
+All$dprime <- All$zHIT - All$zFA
+levels(All$Condition) <- c("Habituated", "No-Go", "Novel", "Go")
+maxBins <- All %>%
+  group_by(BirdID) %>%
+  summarise(maxBin = max(Bin))
+
+newstats  <- left_join(maxBins, All, by="BirdID")
+newstatsFinal <- newstats %>%
+  filter(Bin >= (maxBin - 4))
+
+stats <- newstatsFinal %>%
+  group_by(BirdID) %>%
+  summarise(avgdprime = mean(dprime), avgdr = mean(dr))
+stats <- left_join(stats, All, by="BirdID") %>%
+  select(avgdprime, avgdr, BirdID, Condition) %>%
+  distinct()
+test <- aov(stats$avgdprime ~ stats$Condition)
+test2 <- aov(stats$avgdr ~ stats$Condition)
+
+drplot <- ggplot(data=newstats, aes(x=Bin/maxBin, y=dr, color=Condition)) + geom_point(aes(colour=Condition)) + stat_smooth(method="lm", formula = y ~ log(x), size=1) + ylab("dr") + xlab("Fraction of trials") 
+
+dprimeplot <- ggplot(data=newstats, aes(x=Bin/maxBin, y=dprime, color=Condition)) + geom_point(aes(colour=Condition)) + stat_smooth(method = "lm", formula = y ~ log(x), size=1) + ylab("d'") + xlab("Fraction of trials") + theme(legend.position="none")
+
+
+legend <- get_legend(drplot + theme(legend.position="right"))
+prow <- plot_grid( dprimeplot + theme(legend.position="none"),
+           drplot + theme(legend.position="none"),
+           align = 'vh',
+           labels = "AUTO",
+           hjust = -1,
+           nrow = 1
+           )
+p <- plot_grid(prow, legend, ncol = 2, rel_widths = c(1, .15))
+p
+```
+
+###Visual inspection of matched sections
+The hybridised section closest to 1.2 mm from the midline (matched using the ZEBrA Atlas [@zebraOnline]) was manually selected for each bird and placed in a montage (\autoref{fig-montage}). Careful visual inspection of this selection of images did not reveal any obvious between condition differences. Subtle variations in the anatomical pattern of labeling throughout the brain are apparent when comparing sections. However, these variations do not visibly correlate with treatment conditions.
+
+```{r echo=FALSE, fig.cap="\\label{fig-montage}Right hemisphere parasaggital sections from each individual, 1.2 mm from midline."}
+#, out.width="600px", fig.align="center"
+include_graphics('./External_images/1pt2_montage.pdf')
+```
+
+For example, the pattern of expression in NCM is in some birds patchy (e.g. Novel column 5 and No-Go column 5) and in others more consistent throughout (e.g. Novel column 3 and Go column 1); these patterns of expression do not bear any obvious relationship to condition. Other regions at this level that varied between individuals, but not between conditions, were the dorsal medial arcopallium (ventral to NCM), medial striatum, and lateral striatum. Additionally, some individuals exhibited a distinctive pattern of staining in the granule cell layer in folia VIII/IX of the cerebellum, which was not explained by condition or song ID.
+
+```{r echo=FALSE, fig.cap="\\label{fig-cerebellum}Dense staining in the granule cell layer of folia VIII/IX of medial cerebellum, 0.5 mm from midline, right hemisphere.", fig.align="center"}
+
+include_graphics('./External_images/cerebellum.pdf')
+```
+
+Unexpectedly, I found no visually discernable difference in the strength of the staining in the auditory forebrain between the novel and habituated conditions. Instead, all sections were similarly densely stained in CMM, and somewhat less densely in NCM, albeit with some individual differences that did not appear to relate to condition. Birds in the two experimental conditions (Go and No-Go) appeared to have the same overall level of staining in the auditory forebrain as the birds in the control conditions (\autoref{fig-zoomedAL}).
+
+```{r echo=FALSE, fig.cap="\\label{fig-zoomedAL}Right hemisphere auditory forebrain, 1.2 mm from midline. A) Go. B) No-Go. C) Novel. D) Habituated. All images are from representative birds, where overall staining levels are average for that condition."}
+
+include_graphics('./External_images/ContrastZenk.pdf')
+```
+
+To evaluate the range of brain regions that expressed _ZENK_, a semi-quantitative assessment of regional staining was conducted for a subset of individuals (n = 14; 3 Novel, 4 Habituated, 3 Go, 4 No-Go); all hybridised sections for that individual were viewed and if any of those regions showed staining such that it caused that region to be identifiable (using the ZEBrA Atlas as a reference [@zebraOnline]), that region was coded as expressing _ZENK_. If a region was not easily identifiable through its _ZENK_ expression, then it was coded as not expresing _ZENK_. The 16 regions of interest were: CMM, NCM, hippocampus, parahippocampus, HVC, nidopallium, lateral striatum, medial striatum, globus pallidus, dorsolateral corticoid area, entopallium, robust nucleus of the arcopallium, nucleus taeniae, dorsolateral nucleus of the anterior thalamus (DLM), intercollicular nucleus, and folia VIII/IX of medial cerebellum (\autoref{fig-semiquant}). With such a small sample size it is impossible to draw robust conclusions, but only the parahippocampus revealed "all-or-nothing" staining for one condition and not another (all birds in the novel condition exhibited parahippocampal staining, and no birds in the habituated condition exhibited parahippocampal staining).
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-semiquant}Proportion of individuals in each condition exhibiting clear _ZENK_ expression in each brain region.", fig.width=6, fig.height=4}
+
+adh <- read.csv("./Data/AdhocResults.csv")
+
+res <- adh %>%
+  group_by(Condition) %>%
+  select(-BirdID) %>%
+  summarise_each(funs(mean))
+names(res) <- c("Condition", "CMM", "NCM", "Hippocampus", "Parahippocampus", "HVC", "DELETE1", "Nidopallium", "Lateral striatum", "Medial striatum", "Globus pallidus", "DELETE2", "Dorsolateral corticoid area", "Entopallium", "DELETE3", "Cerebellar folia VIII/IX", "RA", "Intercollicular nucleus", "DELETE4", "DELETE5", "Nucleus taeniae", "DELETE6", "DELETE7", "DLM")
+res <- res %>% select(-num_range("DELETE", 1:7))
+res2 <- res %>% gather(Region, Proportion, 2:17)
+levels(res2$Condition) <- c("Hab", "No-Go", "Go", "Novel")
+res2$Region <- as.character(res2$Region)
+res2$Region <- factor(res2$Region, levels=unique(res2$Region))
+
+fig <- ggplot(res2, aes(Condition, Region, fill=Proportion)) + geom_tile() + labs(fill="Proportion")
+fig
+```
+
+###Quantitative analysis of _ZENK_ signal intensities in the auditory forebrain
+The distribution of pixel intensities for each ROI was determined to be non-parametric. For example, skewness values (third order moment about the mean) for each ROI were z-transformed and plotted against a red box indicating an acceptable range of skewness [@Kim2013a]. As the vast majority of skewness scores fall outside the acceptable range, median pixel intensity values for each ROI were used as the response variable (\autoref{fig-skewplot}). 
+
+Nested linear mixed effects models (LMMs) on median pixel intensity for each ROI were carried out using lme4 (R package). The null model included median pixel intensity of the whole telencephalon (WholeIntensity) and a random effect of SongID (6 levels, each representing a different male's song). The inclusion of WholeIntensity as a fixed effect served to normalise the ROI pixel intensity to the overall telencephalon signal level. As the median pixel intensity of ROIs has a strong linear relationship to the WholeIntensity of the relevant image (r$^{2}$ = 0.75, _p_ < 0.0001; \autoref{fig-skewplot}, Panel B), whole telencephalon median pixel density can be included as a linear predictor variable. Post-hoc tests indicated a significant main effect of median telencephalon pixel intensity (t = -21.0, _p_ < 0.0001; lsmeans function from lmerTest package) but not of song ID ($\chi^2$ = 2.21, _p_ = 0.10; rand function from lmerTest package).
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig-skewplot}Model validation of GLMM. A) Distribution of skewness z-scores for ROI pixel intensity. The red rectangle indicates the acceptable range of skewness for small sample sizes. B) Linear relationship between median pixel intensity of ROI and of whole telencephalon.", fig.width=6}
+
+dsub <- filter(d, ROI != "whole")
+dsub <- filter(dsub, ROI != "l")
+dsub$ROI <- factor(dsub$ROI)
+dsub$Skew[is.nan(dsub$Skew)] = 0
+dsub$Skew[which(dsub$Skew > 5)] <- 0
+
+stderr <- function(x) sd(x)/sqrt(length(x))
+sdskew <- stderr(dsub$Skew)
+
+Skewp <- ggplot(data=dsub, aes(Skew/sdskew)) + geom_histogram() +  annotate("rect", xmin=-1.96, xmax=1.96, ymin=-Inf, ymax=Inf, alpha=0.2, fill="red") +xlab("Skewness z-score") + ylab("Frequency")
+
+#where red box is "acceptable" range for normal data
+
+medianplot <- ggplot(data=dsub, aes(Median, WholeMed)) + geom_point() + geom_smooth(method=lm) + xlab("Median ROI pixel intensity") + ylab("Median telen. pixel intensity")
+#cor.test(dsub$Median, dsub$WholeMed, method="pearson")
+
+plot_grid(Skewp, medianplot, labels="AUTO")
+
+```
+
+LMMs including main fixed effects of condition (4 levels: Go, No-Go, Novel, Habituated), ROI (8 levels: medial CMM, medial dNCM, medial vNCM, medial cNCM; and lateral CMM, lateral dNCM, lateral vNCM, lateral cNCM), and an interaction between condition and ROI were also conducted. The best fitting model included a main effect of ROI, but not a main effect of Condition nor an interaction between the two (\autoref{tab-lmmPixelIntensity}, Model 4; see also \autoref{fig-conditiondiffs}). Nested model comparisons indicated only ROI increased the goodness-of-fit of the model; therefore, ROI is the only significant predictor of median pixel density. Post-hoc tests (lsmeans package, Tukey correction) on the best fitting model (\autoref{tab-lmmPixelIntensity}; Model 2) show significant ROI differences between 14 of the 28 possible contrasts (all _p_ < 0.05; \autoref{fig-conditiondiffs}).
+
+\begin{table}
+\caption{LMMs for median pixel intensity of all target brain regions.}
+\label{tab-lmmPixelIntensity}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llllllll@{}}
+\toprule
+Model& Factors                      & df & AIC   & Log-lik.       & Comparator & $\chi^2$ test & P ($>\chi^2$) \\ \midrule
+NULL & WholeMed + (1 | SongID)      & 4  & 945.9 & -469.0         &            &               &               \\
+1    & NULL + Condition             & 7  & 948.0 & -467.0         & NULL       & 3.92          & 0.27          \\
+2    & NULL + ROI                   & 11 & 886.0 & -432.0         & NULL       & 73.9          & 2.4e-14        \\
+3    & Model 2 + Condition          & 14 & 885.2 & -428.6         & Model 2    & 6.80          & 0.079         \\
+4    & Model 3 + Condition:ROI      & 35 & 906.0 & -418.0         & Model 3    & 21.2          & 0.45    
+     \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, results="hide"}
+
+
+dsub <- d %>%
+  filter(ROILat != "llateral") %>%
+  filter(ROILat != "lmedial") %>%
+  filter(ROILat != "wholelateral") %>%
+  filter(ROILat != "wholemedial")
+dsub$SongID <- as.factor(dsub$SongID)
+dsub$ROILat <- droplevels(dsub$ROILat)
+#levels(dsub$ROI) <- c("CMM", "cNCM", "dNCM", "vNCM")
+
+lmNull <- lmer(255-Median ~ WholeMed + (1|SongID), data=dsub)
+lm1 <- lmer(255-Median ~ Condition + WholeMed + (1|SongID), data=dsub)
+lm2 <- lmer(255-Median ~ ROILat + WholeMed + (1|SongID), data=dsub)
+lm3 <- lmer(255-Median ~ Condition + ROILat + WholeMed + (1|SongID), data=dsub)
+lm4 <- lmer(255-Median ~ Condition*ROILat + WholeMed + (1|SongID), data=dsub)
+anova(lmNull, lm1) #no sig improvement when adding Condition to base
+anova(lmNull, lm2) #massive sig improvement when adding ROI to base
+anova(lm2, lm3) #no sig improvement when adding Condition to model with ROI
+anova(lm3, lm4) #no sig interaction between Condition and ROI
+summary(lm3) #best fit model; sig effect of Condition
+
+
+lsmeans::lsmeans(lm3, pairwise~Condition, adjust="tukey")
+lsmeans::lsmeans(lm3, pairwise~ROILat, adjust="tukey")
+
+summary(lmNull) #sig effect of WholeMed
+lmerTest::rand(lmNull) #no sig effect of SongID
+```
+
+
+```{r, echo=FALSE, message=FALSE,  fig.cap="\\label{fig-conditiondiffs}Median predicted pixel intensity (i.e. model residuals). A) Pixel intensity across all ROIs by condition. B) Pixel intensity across all conditions by ROI. C) Pixel intensity by ROI and condition.", fig.height=8, fig.width=8}
+
+resids <- resid(lmNull)
+dsub2 <- dsub
+dsub2$resids <- resids
+levels(dsub2$ROILat) <- c("L CMM", "M CMM", "L cNCM", "M cNCM", "L dNCM", "M dNCM", "L vNCM", "M vNCM")
+cols <- c()
+
+residplot <- ggplot(dsub2, aes(Condition, resids)) + geom_boxplot() + ylab("(Predicted) pixel intensity") + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ylim(c(-18, 18))
+residplot2 <- ggplot(dsub2, aes(ROILat, resids)) + geom_boxplot() + ylab("(Predicted) pixel intensity") + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ylim(c(-18, 18)) + xlab("ROI")
+residplot3 <- ggplot(dsub2, aes(Condition, resids)) + geom_boxplot(aes(fill=ROILat)) + ylab("(Predicted) pixel intensity") + ylim(c(-18, 18)) + labs(fill="ROI")
+
+toprow <- plot_grid(residplot, residplot2, labels="AUTO")
+wholething <- plot_grid(toprow, residplot3, ncol=1, labels=c('', 'C'))
+wholething
+
+```
+
+###Graph theory analysis of regional connectivity
+Using a linear mixed model on pixel intensity, I found no significant main effect of condition, nor an interaction between condition and ROI. However, by visual inspection, I noted subtle but apparent variations in the fine anatomical pattern of ZENK labelling, despite the absence of evident effects on overall median intensities. To formally evaluate this, I therefore turned to graph theory to determine if the different conditions elicited different patterns of _ZENK_. I first created a graph from all conditions averaged together; vertices (nodes) were defined as the eight ROIs and edges (connections) were only those correlations between ROIs that were significant at $\alpha$ = 0.10 (\autoref{fig-allgraph}). The edges were weighted such that the edge weights were set equal to the correlation coefficients. I found a sparsely connected network (with edge connectivity of 1) with seven edges, with lateral CMM and lateral cNCM as the most central vertices (edge_connectivity and degree functions, igraph package, R). All of the correlations between significantly correlated ROIs were positive.
+
+```{r, echo=FALSE, message=FALSE, fig.cap="\\label{fig-allgraph}Graph of all ROI correlations where _p_ < 0.10, across all conditions.", fig.width=4, fig.height=4}
+
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+dsub <- d %>%
+  filter(ROILat != "llateral") %>%
+  filter(ROILat != "lmedial") %>%
+  filter(ROILat != "wholelateral") %>%
+  filter(ROILat != "wholemedial")
+dsub$SongID <- as.factor(dsub$SongID)
+dsub$ROILat <- droplevels(dsub$ROILat)
+#levels(dsub$ROI) <- c("CMM", "cNCM", "dNCM", "vNCM")
+levels(dsub$ROILat) <- c("L CMM", "M CMM", "L cNCM", "M cNCM", "L dNCM", "M dNCM", "L vNCM", "M vNCM")
+
+lmNull <- lmer(255-Median ~ WholeMed + (1|SongID), data=dsub)
+
+dsubR <- dsub
+dsubR$resids <- resid(lmNull)
+dsubR2 <- dsubR %>%
+  select(ROILat, resids, Condition, BirdID)
+dsubR2 <- spread(dsubR2, ROILat, resids)
+corr.tab <- rcorr(as.matrix(dsubR2[3:10])) 
+corr.tab <- flattenCorrMatrix(corr.tab$r, corr.tab$P) 
+corr.tabSIG <- corr.tab %>%
+  filter(p < 0.1)
+corr.tabSIG <- corr.tabSIG %>%
+  select(row:cor)
+
+graphALL <- graph_from_data_frame(corr.tabSIG, directed=FALSE)
+plot.igraph(graphALL, edge.color = ifelse(E(graphALL)$cor>=0, 'blue','red'), vertex.label.family="sans", vertex.label.dist=2, vertex.frame.color = "white", vertex.label.color="black")
+
+#degree(graphALL)
+#edge_connectivity(graphALL)
+```
+
+I then produced, for each condition, a graph using the same parameters (\autoref{fig-roigraphs}). I found that the graph for birds in the Go condition was the most connected (edge connectivity = 2) and the novel and habituated conditions were the least connected (edge connectivity = 0). Lateral CMM was again the most central vertex for the Go condition. For the No-Go condition, lateral cNCM, medial CMM and lateral dNCM were the most central vertices. For the habituated condition, medial dNCM and lateral vNCM were the most central vertices. And for the novel condition, lateral cNCM, medial dNCM and medial vNCM were the most central vertices. All of the graphs were somewhat sparsely connected, with the Go condition easily the most connected (number of edges, Go: 15; No-Go: 4; Habituated: 4; Novel: 7).
+
+```{r, echo=FALSE, fig.cap="\\label{fig-roigraphs}Graphs for each condition of all ROI correlations where _p_ < 0.10. A) Go. B) No-Go. C) Habituated. D) Novel. Positive correlations have blue edges and negative correlations have red edges.", fig.height=8, fig.width=8}
+sigval <- 0.1
+
+#Go, Hab, NoGo, Novel
+sub <- dsubR %>%
+  filter(Condition == "Go") %>%
+  select(ROILat, resids, Condition, BirdID) %>%
+  spread(ROILat, resids)
+corr.tab <- rcorr(as.matrix(sub[3:10]))
+corr.tab <- flattenCorrMatrix(corr.tab$r, corr.tab$P)
+corr.tabSIG <- corr.tab %>%
+  filter(p < sigval) %>%
+  select(row:cor)
+GoGraph <- graph_from_data_frame(corr.tabSIG, directed=FALSE)
+
+
+sub <- dsubR %>%
+  filter(Condition == "NoGo") %>%
+  select(ROILat, resids, Condition, BirdID) %>%
+  spread(ROILat, resids)
+corr.tab <- rcorr(as.matrix(sub[3:10]))
+corr.tab <- flattenCorrMatrix(corr.tab$r, corr.tab$P)
+corr.tabSIG <- corr.tab %>%
+  filter(p < sigval) %>%
+  select(row:cor)
+NoGoGraph <- graph_from_data_frame(corr.tabSIG, directed=FALSE)
+
+
+sub <- dsubR %>%
+  filter(Condition == "Hab") %>%
+  select(ROILat, resids, Condition, BirdID) %>%
+  spread(ROILat, resids)
+corr.tab <- rcorr(as.matrix(sub[3:10]))
+corr.tab <- flattenCorrMatrix(corr.tab$r, corr.tab$P)
+corr.tabSIG <- corr.tab %>%
+  filter(p < sigval) %>%
+  select(row:cor)
+HabGraph <- graph_from_data_frame(corr.tabSIG, directed=FALSE)
+
+
+sub <- dsubR %>%
+  filter(Condition == "Novel") %>%
+  select(ROILat, resids, Condition, BirdID) %>%
+  spread(ROILat, resids)
+corr.tab <- rcorr(as.matrix(sub[3:10]))
+corr.tab <- flattenCorrMatrix(corr.tab$r, corr.tab$P)
+corr.tabSIG <- corr.tab %>%
+  filter(p < sigval) %>%
+  select(row:cor)
+NovelGraph <- graph_from_data_frame(corr.tabSIG, directed=FALSE)
+
+
+par(mfrow=c(2,2))
+plot.igraph(GoGraph, edge.color = ifelse(E(GoGraph)$cor>=0, 'blue','red'), vertex.label.family="sans", vertex.label.dist=2, vertex.frame.color = "white", vertex.label.color="black")
+mtext(side=3, line=-1, text="A", adj=0, cex=2) 
+plot.igraph(NoGoGraph, edge.color = ifelse(E(NoGoGraph)$cor>=0, 'blue','red'), vertex.label.family="sans", vertex.label.dist=2, vertex.frame.color = "white", vertex.label.color="black")
+mtext(side=3, line=-1, text="B", adj=0, cex=2) 
+plot.igraph(HabGraph, edge.color = ifelse(E(HabGraph)$cor>=0, 'blue','red'), vertex.label.family="sans", vertex.label.dist=2, vertex.frame.color = "white", vertex.label.color="black")
+mtext(side=3, line=-1, text="C", adj=0, cex=2) 
+plot.igraph(NovelGraph, edge.color = ifelse(E(NovelGraph)$cor>=0, 'blue','red'), vertex.label.family="sans", vertex.label.dist=2, vertex.frame.color = "white", vertex.label.color="black")
+mtext("A", side=4, line=4, adj=0, font=1, cex=2)
+mtext(side=3, line=-1, text="D", adj=0, cex=2) 
+
+# edge_connectivity(GoGraph)
+# edge_connectivity(NoGoGraph)
+# edge_connectivity(HabGraph)
+# edge_connectivity(NovelGraph)
+# 
+# degree(GoGraph)
+# degree(NoGoGraph)
+# degree(HabGraph)
+# degree(NovelGraph)
+```
+
+##Discussion
+Here I tested whether the learned valence of an acoustic stimulus is encoded by, or represented in, different patterns of _ZENK_ expression within NCM and CMM. Using _in situ_ hybridisation, I found patterns of individual differences in _ZENK_ expression throughout the brain. However, using quantitative analysis, I found that these individual differences did not relate to the condition; that is, there is no clear difference in the overall level of _ZENK_ expression in the auditory forebrain between the Go, No-Go, novel and habituated conditions. Finally, using simple graph theory, I did find evidence that the Go condition elicited a more coordinated response across the auditory forebrain than the three other conditions.
+
+###Individual differences bear no relationship to condition
+Visual inspection of _in situ_ hybridisation images revealed multiple regions where apparent individual differences were not explained by the condition. These included staining in the medial and lateral striatum, and the granule cell layer in folia VIII/IX of the cerebellum. _c-fos_ expression in the striatum has been shown to be associated with nest building behaviours in male zebra finches [@Hall2014], and _ZENK_ expression there may reflect planned motor behaviours, but if so, those behaviours are not produced in response to the song playback condition. The remarkably dense staining in folia VIII/IX of the medial cerebellum for some individuals, has, to our knowledge, not been previously characterised [but see @Feenders2008 for evidence that widespread cerebellar staining is involved in hopping movements]. Folia VIII/IX receive trigeminal (i.e. facial) input [@Arends1989] and zebra finches have averaged sized folia, compared to other bird species [@Iwaniuk2007]. The presence of _ZENK_ expression in this part of the cerebellum could not be explained by condition or song ID, but could perhaps be related to pecking or feeding behaviour during song playback, which was not assessed here.
+
+Additionally, the visual patchiness in NCM was unexpected, as many studies of conspecific playback find a more uniform distribution of cells expressing _ZENK_ [@Kruse2004; @Lampen2014; @Stripling2001]. However, this finding is in keeping with the wealth of evidence for the non-uniformity of activity in NCM [@Chew1995a; @Ribeiro1998; @Sanford2010]. I suggest that the non-uniformity of activity in NCM reflects the complex environment in which the birds were exposed to the song presentation. Indeed, the patchiness is more similar to that seen in response to heterospecific song [@Stripling2001], noise [@Park2002], or unpaired shocks and conspecific songs [@Jarvis1995a]. Additionally, the difficulty in selecting matched sections may have added to the perceived non-uniformity of _ZENK_ expression in NCM across birds.
+
+###All conditions elicit similar levels of _ZENK_ expression in the auditory forebrain
+Quantitative analysis revealed that the intensity of _ZENK_ staining in the auditory forebrain was consistent across all conditions, though there was a non-significant trend for reduced levels of _ZENK_ expression in the No-Go condition compared to the three other conditions. Previous literature has demonstrated aspects of song processing that are lateralised to either the left or right hemisphere [@Lampen2017; @Ruijssevelt2018; @Voss2007]. Here I only assessed the right hemisphere, so it is therefore possible that a Go/No-Go discrimination might be mediated by the left hemisphere. However, a separate RNA-Seq analysis following Go or No-Go acute song playback, which incorporated data from the auditory forebrain region in both hemispheres, found no significant difference in _ZENK_ expression between the Go and No-Go conditions (\autoref{fig-juliedata}; Go and No-Go bars). 
+
+```{r echo=FALSE, fig.cap="\\label{fig-juliedata}Normalised counts of _ZENK_ gene expression in the auditory forebrain from two experiments. Aviary (Avi) and Isolated (Iso) are from George & Clayton, 2018. Go and No-Go are from the birds characterised in Chapter 4. Figure produced by J. George."}
+
+include_graphics('./External_images/juliedata.pdf')
+```
+
+The lack of significant difference in overall _ZENK_ staining in the auditory forebrain between the novel and habituated condition was especially surprising, as I initially conceived the novel and habituated conditions to act as positive and negative controls, respectively. Previous literature has almost uniformly found a difference in _ZENK_ expression in the auditory forebrain between novel and habituated song, where very little _ZENK_ staining can be found in response to habituated song [@Kruse2004; @Jarvis1995a; @Mello1995; @Woolley2008]. Unlike previous studies assessing habituation by direct repetition of the same stimulus in the same context, here our "habituated" stimulus was presented in a subtly novel context as it had a novel temporal organisation (i.e. one song steadily repeated every 10 seconds). In a post-hoc comparison using RNA-Seq methods, George (2018, pers. comm.) found that a separate cohort of female zebra finches exposed to Go and No-Go songs (the birds characterised in Chapter 4) had intermediate levels of _ZENK_ gene expression compared to female zebra finches in overnight social/auditory isolation and females in an aviary (\autoref{fig-juliedata}). Though the data is from different birds, this provides evidence that all of the birds in the present study, including the habituated condition, exhibit an actual _ZENK_ response to the song playback. I posit that the habituated condition may have been sufficiently novel to the birds, given the overnight silence and acute nature (i.e. one song every 10 seconds) of the playback. Though the birds in the habituated condition were accustomed to unsolicited playback of the song, the timing of those playbacks would have been less frequent and more irregular. This change in context may have driven the _ZENK_ response to habituated playback here [as in @Kruse2004].
+
+There was, however, across all conditions, a main effect of region of interest, where _ZENK_ expression was highest in the lateral and medial CMM and lowest in lateral and medial cNCM. Along the medio-lateral axis, I found little evidence that medial (0.5 mm from the midline) and lateral (1.2 mm from the midline) parts of the same region varied. I therefore suggest that the region 1.2 mm from the midline is still part of the auditory forebrain, and that NCL/CLM begin more laterally. I did, however, find evidence that there is less of a _ZENK_ response to all conditions in cNCM than rostral NCM (i.e. dNCM and vNCM). This is a similar pattern of response as found by @Terpstra2006 when female zebra finches were passively exposed to their father's song, but it differs from the  pattern of response they found when female zebra finches were passively exposed to novel song. The pattern of _ZENK_ expression found here also does not match with that found in female white-throated sparrows in response to acute conspecific male song; @Sanford2010 found greater expression in cNCM than in dNCM and vNCM, which is opposite to the pattern seen in the present study. It also contrasts with a study of conspecific calls in cowbirds, where ZENK expression was greater in NCM than CMM [@Lynch2017a]. Our findings do, however, agree with two other studies of conspecific song playback to female zebra finches, where _ZENK_ expression was denser in CMM than NCM [@Lampen2014; @Woolley2008]. These diverse patterns of responses imply that the avian forebrain can recruit different gross patterns of activity in response to conspecific playback, but I still have no clear indication as to the cause or function of these.
+
+I did not replicate the results of @Gentner2004, where, for starlings, _ZENK_ expression was greater in both NCM and CMM in response to novel song playback than in response to trained songs. In contrast to that study, I presented the songs passively, in a context where the birds were not being reinforced or punished for their behaviours. The starlings in @Gentner2004 were engaged with the operant apparatus, and all of the stimuli, including the novel songs, were reinforced or punished using a Go/No-Go methodology. I believe that the increased _ZENK_ expression in response to novel songs found by @Gentner2004 may have been due to a combination of both active discrimination and exposure to novel conspecific songs, whereas our birds solely had exposure to novel conspecific songs. Multiple studies have conducted electrophysiological investigations of avian forebrain response to song playback after learning. All found that CMM neurons respond with increased firing rates or encode more data for rewarded songs than novel songs [@Bell2015; @Gentner2003; @Jeanne2011]. I found no evidence that _ZENK_ expression is also increased in response to rewarded songs, which may be due to _ZENK_'s role in memory formation. Here I presented playbacks in a passive context where, as much as possible, I did not encourage any active learning about the stimulus, although I recognise that extinction learning may be occurring [e.g. @Jarvis1995a]. _ZENK_ expression may therefore not be increased in response to rewarded songs because the birds were not engaged in the formation or maintenence of memories.
+
+###Connectedness of the auditory forebrain varies by condition
+Though I found no main effect of condition, nor an interaction between condition and region of interest, I had predicted that the regions within the auditory forebrain may respond as different networks, depending on the condition. An analysis of the statistical correlations of _ZENK_ expression revealed that regions within the auditory forebrain reponded in the most coordinated way to the Go songs. Compared to the three other conditions, the Go condition produced a more connected network; that is, in response to Go stimuli, the auditory forebrain responded in a more uniform way. If _ZENK_ expression was high in one brain region for one bird, it tended to be high in the other regions. Similarly, if _ZENK_ expression was low in one brain region for one bird, it tended to be low in the other regions. Therefore, despite there being no overall increase in _ZENK_ expression in response to the Go song, there was an increased tendency for the regions within the auditory forebrain to respond in sync with one anther. In contrast, the three other conditions had fewer regions whose activity correlated with one another, and many of the correlations were negative. For example, for the No-Go condition, medial CMM activity was negatively correlated with medial dNCM activity. Fewer edges, and combinations of positive and negative correlations, both suggest that the regions in the auditory forebrain act more independently, and do not form a coordinated response to the No-Go, habituated, and novel songs.
+
+One potential mechanism for producing a coordinated response to Go songs across the auditory forebrain is through catecholaminergic innervation. Catecholamines, especially noradrenalin, are hypothesised to modulate the differential IEG response to familiar and novel songs in the auditory forebrain [@Matragrano2012; @Velho2012a]. Additionally, evidence from a recent master's thesis indicates that experimental manipulation of dopaminergic activity in NCM can alter female zebra finch preference for song [@Barr2017]. Theoretically, widespread catecholamine release across the auditory forebrain in response to a rewarding stimulus could entrain multiple regions to respond with similar levels of IEG expression [@Clayton2000].
+
+Network analyses often attempt to find central vertices, or regions that correlate with many other regions. For the Go response, I found that lateral CMM was the most central vertex. Biologically, this indicates that lateral CMM drives or simply reflects the activity in many other regions in response to Go songs. In contrast, the No-Go, habituated, and novel conditions all produce networks that were too sparse to produce particularly central vertices, but lateral CMM did not correlate with any other regions in any of those three conditions. 
+
+###Conclusion 
+Here I designed an experiment where I minimised, as much as possible, the confound of active learning in order to investigate passive perception of previously learned conspecific songs in adult female zebra finches. I analysed eight regions in the auditory forebrain, which is the part of the brain most clearly involved in higher-order auditory processing. _ZENK_ expression in these eight regions did not vary by condition, with no difference in overall _ZENK_ expression levels between Go, No-Go, novel, or habituated song playback. However, I found evidence for individual differences in _ZENK_ expression, and therefore applied a network analysis to look for evidence of correlated shifts in expression associated with the four conditions. I saw evidence that the Go song playback drives a more coordinated response across the auditory forebrain than do the three other conditions. I conclude that although overall _ZENK_ expression may not vary across the auditory forebrain, differential networks of activity are induced depending on the valence of the previously learned stimulus' association. The subtlety of the differences between conditions suggests that there may be a role for subtle differences in learning behaviours, which I will examine in the following chapters.

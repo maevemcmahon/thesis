@@ -1,0 +1,10 @@
+---
+title: "Appendix"
+output: html_document
+---
+\phantomsection
+\chapter*{Appendix A}
+\addcontentsline{toc}{chapter}{Appendix A}
+\pagestyle{plain}
+
+This document was composed using R Markdown in RStudio. A respository containing all raw data, R statistical code, and other text necessary to reproduce this thesis in its entirety is available at http://github.com/maevemcmahon/thesis
